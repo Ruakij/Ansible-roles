@@ -1,0 +1,5 @@
+- name: Install ansible packages
+  package:
+      name:
+          - python3
+      state: latest
