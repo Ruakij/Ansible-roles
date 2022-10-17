@@ -18,6 +18,7 @@ component netmaker_server {
   rqlite -up- rq_http
   rqlite -up- rq_cluster
   ng_stream --down-( rq_cluster
+  ng_http --down-( rq_http
 
   component nm_ui
   nm_ui -up- nm_ui_http
