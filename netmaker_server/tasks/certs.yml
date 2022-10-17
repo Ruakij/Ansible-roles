@@ -1,0 +1,34 @@
+- name: Generate PrivateKey
+  community.crypto.openssl_privatekey:
+    path: /opt/netmaker_server/certs/node.key
+
+- name: Generate Certificate-Signing-Request from privateKey
+  community.crypto.openssl_csr:
+    path: /opt/netmaker_server/certs/node.csr
+    privatekey_path: /opt/netmaker_server/certs/node.key
+    common_name: "{{ ansible_facts.nodename }}"
+    subject_alt_name: "DNS:*.{{ ansible_facts.nodename }},DNS:*.{{ netmaker.base_domain }}"
+
+- name: Fetch CSR
+  ansible.builtin.fetch:
+    src: /opt/netmaker_server/certs/node.csr
+    dest: tmp_files/
+
+- name: Sign CSR locally with CA
+  local_action: community.crypto.x509_certificate
+  args:
+    path: tmp_files/{{ inventory_hostname }}/opt/netmaker_server/certs/node.crt
+    csr_path: tmp_files/{{ inventory_hostname }}/opt/netmaker_server/certs/node.csr
+    ownca_path: secret_files/netmaker_server/ca/ca.crt
+    ownca_privatekey_path: secret_files/netmaker_server/ca/ca.key
+    provider: ownca
+  
+- name: Copy Signed Certificate
+  ansible.builtin.copy:
+    src: tmp_files/{{ inventory_hostname }}/opt/netmaker_server/certs/node.crt
+    dest: /opt/netmaker_server/certs/node.crt
+
+- name: Copy CA Certificate
+  ansible.builtin.copy:
+    src: secret_files/netmaker_server/ca/ca.crt
+    dest: /opt/netmaker_server/certs/ca.crt
