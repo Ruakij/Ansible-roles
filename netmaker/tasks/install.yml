@@ -1,0 +1,25 @@
+- name: Install Packages
+#  when: docker_file.stat.exists == False
+  package:
+    name:
+      - gpg
+      - gpg-agent
+
+- name: Add netmaker-key
+  apt_key:
+    url: https://apt.netmaker.org/gpg.key
+    state: present
+
+- name: Add netmaker-repository
+  apt_repository:
+    repo: "deb https:apt.netmaker.org stable main"
+    state: present
+    filename: netmaker
+    update_cache: yes
+
+- name: Install wireguard & netclient
+  package:
+    name:
+      - wireguard
+      - netclient
+    state: latest
