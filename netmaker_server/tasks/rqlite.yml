@@ -9,12 +9,12 @@
   failed_when: command.rc != 0
   when: "inventory_hostname == groups['netmaker_server'][0]"
 
-- name: Waiting for rqlite to accept connections on 1st-node
-  ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
-    port: 4001
-    state: started
-  when: "inventory_hostname == groups['netmaker_server'][0]"
+# - name: Waiting for rqlite to accept connections on 1st-node
+#   ansible.builtin.wait_for:
+#     host: "{{ inventory_hostname }}"
+#     port: 4001
+#     state: started
+#   when: "inventory_hostname == groups['netmaker_server'][0]"
 
 - name: Start rqlite service for other nodes
   command: "docker-compose --project-directory /opt/netmaker_server/ up -d rqlite"
@@ -22,9 +22,9 @@
   failed_when: command.rc != 0
   when: "inventory_hostname != groups['netmaker_server'][0]"
 
-- name: Waiting for rqlite to accept connections on other nodes
-  ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
-    port: 4001
-    state: started
-  when: "inventory_hostname != groups['netmaker_server'][0]"
+# - name: Waiting for rqlite to accept connections on other nodes
+#   ansible.builtin.wait_for:
+#     host: "{{ inventory_hostname }}"
+#     port: 4001
+#     state: started
+#   when: "inventory_hostname != groups['netmaker_server'][0]"
