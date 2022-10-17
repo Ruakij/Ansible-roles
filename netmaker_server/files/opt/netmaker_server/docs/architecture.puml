@@ -1,0 +1,33 @@
+@startuml
+
+component netmaker_server {
+  component nginx {
+    component ng_stream
+    component ng_http
+
+    ng_stream -right-> ng_http : tls-termination
+  }
+
+  component Mosquitto
+  Mosquitto -up- mq_plain
+  Mosquitto -up- mq_tls
+
+  ng_stream -down-( mq_tls
+
+  component rqlite
+  rqlite -up- rq_http
+  rqlite -up- rq_cluster
+  ng_stream --down-( rq_cluster
+
+  component nm_ui
+  nm_ui -up- nm_ui_http
+  ng_http -down-( nm_ui_http
+
+  component nm_api
+  nm_api -up- nm_api_http
+  ng_http -down-( nm_api_http
+  nm_api --( rq_http
+}
+ng_TLS -down- ng_stream
+
+@enduml
