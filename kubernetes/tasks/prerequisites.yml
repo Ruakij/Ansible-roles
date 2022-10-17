@@ -1,0 +1,89 @@
+#- name: Load br_netfilter kernel-module
+#  modprobe:
+#      name: br_netfilter
+#      state: present
+
+- name: Set sysctl settings for iptables bridged traffic
+  copy:
+    dest: "/etc/sysctl.d/kubernetes.conf"
+    content: |
+        net.bridge.bridge-nf-call-ip6tables = 1
+        net.bridge.bridge-nf-call-iptables = 1
+
+        net.ipv4.conf.all.forwarding=1
+        net.ipv6.conf.all.forwarding=1
+  notify: reload_sysctl
+
+#- name: Disable swap
+#  command: swapoff -a
+
+- name: Install iptables
+  package:
+      name:
+          #- containerd
+          - iptables
+      state: latest
+
+- name: Check if containerd-service exists & is started
+  service:
+    name: containerd
+    state: started
+  ignore_errors: true
+  register: containerd_status
+  
+- name: Install containerd when not exists
+  package:
+    name:
+      - containerd
+  when: containerd_status is failed
+
+- name: Create containerd config-folder
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Deploy containerd-config
+  ansible.builtin.copy:
+    src: containerd_config.toml
+    dest: /etc/containerd/config.toml
+    mode: u=rw,g=r,o=r
+  notify: restart_containerd
+
+- name: Set control-plane-dns-endpoint towards local-ip
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ ansible_facts.default_ipv6.address }} k8s-control-plane.system.ruekov.eu" 
+
+- name: Setting network facts..
+  set_fact:
+    inventory_group_index: "{{ groups['kubernetes'].index(inventory_hostname) }}"
+    ipPool_ipv6_nodeip_cidr_only_prefix:  '{{ kubernetes.ipPool.ipv6.nodeip_cidr | regex_replace ("(?<=:)[0-9a-f]{0,4}(\/[0-9]+)?$","") }}'
+    ipPool_ipv6_nodeip_cidr_cidr:         '{{ kubernetes.ipPool.ipv6.nodeip_cidr | regex_replace ("^.*?\/","") }}'
+    ipPool_ipv4_nodeip_cidr_only_prefix:  '{{ kubernetes.ipPool.ipv4.nodeip_cidr | regex_replace ("(?<=.)[0-9]{0,3}(\/[0-9]+)?$","") }}'
+    ipPool_ipv4_nodeip_cidr_cidr:         '{{ kubernetes.ipPool.ipv4.nodeip_cidr | regex_replace ("^.*?\/","") }}'
+  
+- name: Setting more network_facts..
+  set_fact:
+    ipPool_ipv6_nodeip: "{{ ipPool_ipv6_nodeip_cidr_only_prefix }}{{ inventory_group_index|int +1 }}"
+    ipPool_ipv4_nodeip: "{{ ipPool_ipv4_nodeip_cidr_only_prefix }}{{ inventory_group_index|int +1 }}"
+
+- name: Setup IPv4-Network
+  lineinfile:
+    insertafter: "iface {{ ansible_facts.default_ipv4.interface }} inet .+"
+    dest: "/etc/network/interfaces"
+    line: "    up /usr/sbin/ip addr add {{ ipPool_ipv4_nodeip }} dev {{ ansible_facts.default_ipv4.interface }}"
+  register: setup_network_ipv4
+
+- name: Setup IPv6-Network
+  lineinfile:
+    insertafter: "iface {{ ansible_facts.default_ipv4.interface }} inet6 .+"
+    dest: "/etc/network/interfaces"
+    line: "    up /usr/sbin/ip -6 addr add {{ ipPool_ipv6_nodeip }} dev {{ ansible_facts.default_ipv4.interface }}"
+  register: setup_network_ipv6
+
+- name: Force-Reload network-interface
+  command: "ifup --force {{ ansible_facts.default_ipv4.interface }}"
+  when: setup_network_ipv4.changed or setup_network_ipv6.changed
+
+- name: Run handlers to reload configurations
+  meta: flush_handlers

@@ -1,0 +1,16 @@
+## Base ##
+container-runtime-endpoint: unix:///run/containerd/containerd.sock
+
+{% if inventory_hostname != groups['kubernetes'][0] %}
+server: https://{{ kubernetes.control_plane.dns_name }}:9345
+{% endif %}
+token: {{ kubernetes.shared_token }}
+tls-san:
+  - {{ kubernetes.control_plane.dns_name }}
+
+## Networking ##
+#cni: cilium
+
+cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}
+node-ip:      {{ ipPool_ipv4_nodeip }},{{ ipPool_ipv6_nodeip }}

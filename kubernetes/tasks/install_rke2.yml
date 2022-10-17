@@ -1,0 +1,65 @@
+- name: Create rke-helm-manifests-folder
+  ansible.builtin.file:
+    path: '/var/lib/rancher/rke2/server/manifests/'
+    state: directory
+    mode: '0755'
+
+- name: Deploy helm-manifests
+  ansible.builtin.copy:
+    src: 'helm-manifests/'
+    dest: '/var/lib/rancher/rke2/server/manifests/'
+
+- name: Create rke-folder
+  ansible.builtin.file:
+    path: /etc/rancher/rke2/
+    state: directory
+    mode: '0755'
+
+- name: Deploy rke2 config
+  ansible.builtin.template:
+    src: rke2/config.yaml.template
+    dest: /etc/rancher/rke2/config.yaml
+
+- name: Install RKE2
+  command: bash -c "curl -sfL https://get.rke2.io | sh -"
+
+- name: Add RKE2 environment-vars to /etc/profile.d/
+  blockinfile:
+    path: /etc/profile.d/rke2-bin.sh
+    marker: "# {mark} ANSIBLE MANAGED BLOCK | rke2"
+    block: |
+      export PATH="/var/lib/rancher/rke2/bin/:$PATH"
+      export KUBECONFIG="/etc/rancher/rke2/rke2.yaml"
+    create: true
+
+- name: Enable and start rke2-server service for 1st-node
+  ansible.builtin.service:
+    name: rke2-server
+    enabled: yes
+    state: started
+  when: "inventory_hostname == groups['kubernetes'][0]"
+
+- name: Waiting for kubelet to accept connections
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 10250
+    state: started
+  when: "inventory_hostname == groups['kubernetes'][0]"
+
+- name: Enable and start rke2-server service for other nodes
+  ansible.builtin.service:
+    name: rke2-server
+    enabled: yes
+    state: started
+  when: "inventory_hostname != groups['kubernetes'][0]"
+  register: rke2_start
+  until: "rke2_start is not failed"
+  retries: 2
+  delay: 10
+
+- name: Waiting for kubelet to accept connections on other nodes
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 10250
+    state: started
+  when: "inventory_hostname != groups['kubernetes'][0]"
