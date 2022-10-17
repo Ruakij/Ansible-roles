@@ -48,6 +48,8 @@ services:
 
   netmaker: # The Primary Server for running Netmaker
     image: gravitl/netmaker:v0.16.1
+    depends_on:
+      - rqlite
     cap_add: 
       - NET_ADMIN
       - NET_RAW
