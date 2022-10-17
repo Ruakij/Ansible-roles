@@ -1,7 +1,7 @@
 - name: Deploy rqlite config
   ansible.builtin.template:
     src: rqlite-config.json.template
-    dest: /opt/netmaker/rqlite/config.json
+    dest: /opt/netmaker_server/rqlite/config.json
 
 # CERTIFICATE
 - name: Generate PrivateKey
