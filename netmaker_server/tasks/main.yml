@@ -11,6 +11,10 @@
     src: docker-compose.yml.template
     dest: /opt/netmaker_server/docker-compose.yml
 
+- import_tasks: ./certs.yml
+
+- import_tasks: ./nginx.yml
+
 - import_tasks: ./rqlite.yml
 
 - import_tasks: ./netmaker.yml

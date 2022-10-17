@@ -1,6 +1,17 @@
 version: "3.4"
 
 services:
+  nginx:
+    image: nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # Override nginx-config to add stream-import
+      - ./nginx/conf/conf.d/:/etc/nginx/conf.d:ro  # conf.d
+      - ./nginx/conf/stream.d/:/etc/nginx/stream.d:ro  # conf.d
+      - ./certs:/certs:ro # SSL-certificates
+    ports:
+      - 51820:443
+
   rqlite: # Distributed sqlite-db
     image: rqlite/rqlite
     restart: unless-stopped
@@ -8,7 +19,7 @@ services:
     volumes:
       - "./rqlite/data:/rqlite/file"
       - "./rqlite/config.json:/config.json:ro"
-      - "./rqlite/certs:/certs:ro"
+      - "./certs:/certs:ro"
     ports:
       - 4001:4001
       - 4002:4002
