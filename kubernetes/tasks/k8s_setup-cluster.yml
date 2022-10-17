@@ -1,0 +1,4 @@
+- name: Join other nodes to cluster
+  when: "inventory_hostname != groups['kubernetes'][0]"
+  command: 
+

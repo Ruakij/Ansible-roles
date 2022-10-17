@@ -1,0 +1,28 @@
+- name: Add Google-Cloud key
+  apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+- name: Add Kubernetes Repository
+  apt_repository:
+      repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+      state: present
+      filename: kubernetes
+      update_cache: yes
+
+- name: Install kubernetes-tools
+  package:
+      name:
+          - kubeadm
+          - kubelet
+          - kubectl
+      state: latest
+
+- name: Hold upgrades for kubernetes-tools
+  dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+  loop:
+      - kubeadm
+      - kubelet
+      - kubectl

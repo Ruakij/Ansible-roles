@@ -1,0 +1,7 @@
+{% if inventory_hostname != groups['kubernetes'][0] %}
+Cluster:
+{% for node in groups['kubernetes'] if node != inventory_hostname %}
+  - {{ node }}:29001
+{% endfor %}
+{% endif %}
+Address: 0.0.0.0:29001

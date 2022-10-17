@@ -1,0 +1,12 @@
+- name: Deploy Cilium-CLI
+  ansible.builtin.unarchive:
+    src: https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: u=rwx,g=rx,o=rx
+
+- name: Install Cilium
+  when: "inventory_hostname == groups['kubernetes'][0]"
+  command: -cilium install
+  environment: 
+    KUBECONFIG: /etc/kubernetes/admin.conf

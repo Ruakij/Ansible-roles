@@ -1,0 +1,9 @@
+- name: Initialize Kubernetes Cluster
+  when: "inventory_hostname == groups['kubernetes'][0]"
+  command: kubeadm init --control-plane-endpoint={{ control_plane.dns_name }}
+  #--upload-certs
+
+- name: Set environment-var for config
+  lineinfile:
+      dest: ~/.bashrc
+      line: "export KUBECONFIG=/etc/kubernetes/admin.conf"

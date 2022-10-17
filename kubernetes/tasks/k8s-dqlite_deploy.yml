@@ -1,0 +1,21 @@
+- name: Add Dqlite/dev Repository
+  ansible.builtin.apt_repository:
+    repo: ppa:dqlite/dev
+    codename: bionic
+
+- name: Install dependencies
+  package:
+      name:
+          #- musl-dev
+          - libraft-dev
+          - libsqlite3-dev
+          - libdqlite-dev
+          - dqlite
+      state: latest
+
+- name: Deploy binary
+  ansible.builtin.copy:
+    src: k8s-dqlite/k8s-dqlite
+    dest: /usr/local/bin/
+    mode: u=rwx,g=rx,o=rx
+

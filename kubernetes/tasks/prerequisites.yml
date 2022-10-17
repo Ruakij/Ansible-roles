@@ -1,0 +1,31 @@
+- name: Load br_netfilter kernel-module
+  modprobe:
+      name: br_netfilter
+      state: present
+
+- name: Set sysctl settings for iptables bridged traffic
+  copy:
+      dest: "/etc/sysctl.d/kubernetes.conf"
+      content: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+  notify: reload_sysctl
+
+- name: Disable swap
+  command: swapoff -a
+
+- name: Deploy containerd-config
+  ansible.builtin.copy:
+    src: containerd_config.toml
+    dest: /etc/containerd/config.toml
+    mode: u=rw,g=r,o=r
+
+- name: restart_containerd
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+
+- name: Set control-plane-dns-endpoint towards local-ip
+  lineinfile:
+      dest: /etc/hosts
+      line: "{{ ansible_facts.default_ipv6.address }} k8s-control-plane.system.ruekov.eu" 
