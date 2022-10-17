@@ -1,0 +1,20 @@
+- name: General aliases
+  blockinfile:
+      path: "{{ ansible_facts.env.HOME }}/.bashrc"
+      marker: "# {mark} ANSIBLE MANAGED BLOCK | General aliases"
+      block: |
+        alias clr="clear"
+        alias hgrep="history | grep"
+        alias syslog="tail -f --lines=100 /var/log/syslog"
+        alias cp="rsync -hlAXEptgoDS --numeric-ids --info=progress2"
+
+- name: ls aliases and colors
+  blockinfile:
+      path: "{{ ansible_facts.env.HOME }}/.bashrc"
+      marker: "# {mark} ANSIBLE MANAGED BLOCK | ls aliases and colors"
+      block: |
+        export LS_OPTIONS='--color=auto'
+        eval "`dircolors`"
+        alias ls='ls $LS_OPTIONS'
+        alias ll='ls $LS_OPTIONS -l'
+        alias l='ls $LS_OPTIONS -la'
