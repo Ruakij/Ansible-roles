@@ -20,14 +20,17 @@ services:
       - "./rqlite/data:/rqlite/file"
       - "./rqlite/config.json:/config.json:ro"
       - "./certs:/certs:ro"
-    ports:
-      - 4001:4001
-      - 4002:4002
     # FIXME: "node-no-verify" Skipping certificate verification is bad!
     #-http-ca-cert /certs/ca.crt
     #-http-cert    /certs/node.crt
     #-http-key     /certs/node.key
     command: "
+    -http-adv-addr netmaker-rqlite-http.{{ ansible_facts.nodename }}:51820
+    -raft-addr     [::]:4002
+    -raft-adv-addr netmaker-rqlite-cluster.{{ ansible_facts.nodename }}:51820
+
+    -http-ca-cert /certs/ca.crt
+
     -node-encrypt
     -node-ca-cert /certs/ca.crt
     -node-cert    /certs/node.crt
@@ -38,7 +41,7 @@ services:
 
 {% if inventory_hostname != groups['netmaker'][0] %}
     -join-as  netmaker
-    -join     http://{{ groups['netmaker'][0] }}:4001
+    -join     https://netmaker-rqlite-http.{{ groups['netmaker'][0] }}:51820
 {% endif %}
     "
     # FIXME: /\ \/ Change http -> https
@@ -84,7 +87,7 @@ services:
 
       MQ_HOST: "mosquitto"  # the address of the mq server. If running from docker compose it will be "mq". Otherwise, need to input address. If using "host networking", it will find and detect the IP of the mq container.
       MQ_SERVER_PORT: "1883" # the reachable port of MQ by the server - change if internal MQ port changes (or use external port if MQ is not on the same machine)
-      MQ_PORT: "8883" # the reachable port of MQ - change if external MQ port changes (port on proxy, not necessarily the one exposed in docker-compose)
+      MQ_PORT: "51820" # the reachable port of MQ - change if external MQ port changes (port on proxy, not necessarily the one exposed in docker-compose)
       MQ_ADMIN_PASSWORD: "{{ netmaker.mq_admin_password }}"
       
       HOST_NETWORK: "off" # whether or not host networking is turned on. Only turn on if configured for host networking (see docker-compose.hostnetwork.yml). Will set host-level settings like iptables.
@@ -102,7 +105,6 @@ services:
       TELEMETRY: "off" # Whether or not to send telemetry data to help improve Netmaker. Switch to "off" to opt out of sending telemetry.
     ports:
       - "51821-51830:51821-51830/udp" # wireguard ports
-      - "8081:8081" # api port
 {#     labels: # only for use with traefik proxy (default)
       - traefik.enable=true
       - traefik.http.routers.netmaker-api.rule=Host(`netmaker-api.{{ netmaker.base_domain }}`)
@@ -118,8 +120,6 @@ services:
     environment:
       #BACKEND_URL: "http://netmaker-api.{{ netmaker.base_domain }}:8081" # URL where UI will send API requests. Change based on SERVER_HOST, SERVER_HTTP_HOST, and API_PORT
       BACKEND_URL: "http://tranio.ruekov.eu:8081"
-    ports:
-      - 8082:80
 {#     labels:
       - traefik.enable=true
       - traefik.http.middlewares.nmui-security.headers.accessControlAllowOriginList=netmaker-dashboard.{{ netmaker.base_domain }}
@@ -148,8 +148,6 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/logs:/mosquitto/log
-    ports:
-      - "8883:8883"
     depends_on:
       - netmaker
     command: ["/mosquitto/config/wait.sh"]
