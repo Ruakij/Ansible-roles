@@ -1,0 +1,16 @@
+- import_tasks: ./prerequisites.yml
+
+- name: Copy folder-structure
+  ansible.builtin.copy:
+    src: opt/netmaker_server
+    dest: /opt/
+    mode: preserve
+
+- name: Deploy compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.template
+    dest: /opt/netmaker_server/docker-compose.yml
+
+- import_tasks: ./rqlite.yml
+
+- import_tasks: ./netmaker.yml

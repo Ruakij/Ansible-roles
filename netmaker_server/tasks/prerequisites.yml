@@ -1,0 +1,10 @@
+- name: Install wireguard
+  package:
+    name:
+      - wireguard
+    state: latest
+
+- name: Check if default-ipv4-address is private
+  set_fact:
+    private_ipv4_address: "{{ ansible_facts.default_ipv4.address | regex_search('^((10)|(192\\.168)|(172\\.((1[6-9])|(2[0-9])|(3[0-1])))|(100))\\.') }}"
+  when: "netmaker.dynamicIp"

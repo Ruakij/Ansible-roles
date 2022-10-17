@@ -1,0 +1,171 @@
+version: "3.4"
+
+services:
+  rqlite: # Distributed sqlite-db
+    image: rqlite/rqlite
+    restart: unless-stopped
+    hostname: "{{ ansible_facts.nodename }}"
+    volumes:
+      - "./rqlite/data:/rqlite/file"
+      - "./rqlite/config.json:/config.json:ro"
+      - "./rqlite/certs:/certs:ro"
+    ports:
+      - 4001:4001
+      - 4002:4002
+    # FIXME: "node-no-verify" Skipping certificate verification is bad!
+    #-http-ca-cert /certs/ca.crt
+    #-http-cert    /certs/node.crt
+    #-http-key     /certs/node.key
+    command: "
+    -node-encrypt
+    -node-ca-cert /certs/ca.crt
+    -node-cert    /certs/node.crt
+    -node-key     /certs/node.key
+    -node-no-verify
+
+    -auth         /config.json
+
+{% if inventory_hostname != groups['netmaker'][0] %}
+    -join-as  netmaker
+    -join     http://{{ groups['netmaker'][0] }}:4001
+{% endif %}
+    "
+    # FIXME: /\ \/ Change http -> https
+
+  netmaker: # The Primary Server for running Netmaker
+    image: gravitl/netmaker:v0.16.1
+    cap_add: 
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+    restart: unless-stopped
+    volumes: # Volume mounts necessary for sql, coredns, and mqtt
+      - ./dnsconfig/:/root/config/dnsconfig
+      - ./mosquitto/data/:/etc/netmaker/
+    hostname: "{{ ansible_facts.nodename }}"
+    environment: # Necessary capabilities to set iptables when running in container
+      NODE_ID: "{{ ansible_facts.nodename }}"
+      MASTER_KEY: "{{ netmaker.master_key }}" # The admin master key for accessing the API. Change this in any production installation.
+
+{% if not private_ipv4_address %}
+      SERVER_HOST: "{{ ansible_facts.default_ipv4.address }}" # Set to public IP of machine.
+{% endif %}
+      SERVER_NAME: "netmaker-broker.{{ netmaker.base_domain }}" # The domain/host IP indicating the mq broker address
+      SERVER_HTTP_HOST: "netmaker-api.{{ netmaker.base_domain }}" # Overrides SERVER_HOST if set. Useful for making HTTP available via different interfaces/networks.
+      SERVER_API_CONN_STRING: "netmaker-api.{{ netmaker.base_domain }}:8081"
+
+      DISABLE_REMOTE_IP_CHECK: "off" # If turned "on", Server will not set Host based on remote IP check. This is already overridden if SERVER_HOST is set. Turned "off" by default.
+      DNS_MODE: "off" # Enables DNS Mode, meaning all nodes will set hosts file for private dns settings.
+
+      API_PORT: "8081" # The HTTP API port for Netmaker. Used for API calls / communication from front end. If changed, need to change port of BACKEND_URL for netmaker-ui.
+      REST_BACKEND: "on" # Enables the REST backend (API running on API_PORT at SERVER_HTTP_HOST). Change to "off" to turn off.
+      RCE: "off" # Enables setting PostUp and PostDown (arbitrary commands) on nodes from the server. Off by default.
+      CORS_ALLOWED_ORIGIN: "*" # The "allowed origin" for API requests. Change to restrict where API requests can come from.
+      DISPLAY_KEYS: "on" # Show keys permanently in UI (until deleted) as opposed to 1-time display.
+      
+      DATABASE: "rqlite"
+      SQL_CONN: "http://netmaker:{{ netmaker.rqlite_password }}@rqlite:4001/"
+
+      MQ_HOST: "mosquitto"  # the address of the mq server. If running from docker compose it will be "mq". Otherwise, need to input address. If using "host networking", it will find and detect the IP of the mq container.
+      MQ_SERVER_PORT: "1883" # the reachable port of MQ by the server - change if internal MQ port changes (or use external port if MQ is not on the same machine)
+      MQ_PORT: "8883" # the reachable port of MQ - change if external MQ port changes (port on proxy, not necessarily the one exposed in docker-compose)
+      MQ_ADMIN_PASSWORD: "{{ netmaker.mq_admin_password }}"
+      
+      HOST_NETWORK: "off" # whether or not host networking is turned on. Only turn on if configured for host networking (see docker-compose.hostnetwork.yml). Will set host-level settings like iptables.
+      PORT_FORWARD_SERVICES: "" # decide which services to port forward ("dns","ssh", or "mq")
+
+      # this section is for OAuth
+      AUTH_PROVIDER: "" # "<azure-ad|github|google|oidc>"
+      CLIENT_ID: "" # "<client id of your oauth provider>"
+      CLIENT_SECRET: "" # "<client secret of your oauth provider>"
+      FRONTEND_URL: "" # "https://dashboard.<netmaker base domain>"
+      AZURE_TENANT: "" # "<only for azure, you may optionally specify the tenant for the OAuth>"
+      OIDC_ISSUER: "" # https://oidc.yourprovider.com - URL of oidc provider
+      
+      VERBOSITY: "1" # logging verbosity level - 1, 2, or 3
+      TELEMETRY: "off" # Whether or not to send telemetry data to help improve Netmaker. Switch to "off" to opt out of sending telemetry.
+    ports:
+      - "51821-51830:51821-51830/udp" # wireguard ports
+      - "8081:8081" # api port
+{#     labels: # only for use with traefik proxy (default)
+      - traefik.enable=true
+      - traefik.http.routers.netmaker-api.rule=Host(`netmaker-api.{{ netmaker.base_domain }}`)
+      - traefik.http.services.netmaker-api.loadbalancer.server.port=8081 #}
+
+  netmaker-ui:  # The Netmaker UI Component
+    image: gravitl/netmaker-ui:v0.16.1
+    depends_on:
+      - netmaker
+    links:
+      - "netmaker:api"
+    restart: unless-stopped
+    environment:
+      #BACKEND_URL: "http://netmaker-api.{{ netmaker.base_domain }}:8081" # URL where UI will send API requests. Change based on SERVER_HOST, SERVER_HTTP_HOST, and API_PORT
+      BACKEND_URL: "http://tranio.ruekov.eu:8081"
+    ports:
+      - 8082:80
+{#     labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.nmui-security.headers.accessControlAllowOriginList=netmaker-dashboard.{{ netmaker.base_domain }}
+      - traefik.http.middlewares.nmui-security.headers.stsSeconds=31536000
+      - traefik.http.middlewares.nmui-security.headers.browserXssFilter=true
+      - traefik.http.middlewares.nmui-security.headers.customFrameOptionsValue=SAMEORIGIN
+      - traefik.http.middlewares.nmui-security.headers.customResponseHeaders.X-Robots-Tag=none
+      - traefik.http.middlewares.nmui-security.headers.customResponseHeaders.Server= # Remove the server name
+      - traefik.http.routers.netmaker-ui.middlewares=nmui-security@docker
+      - traefik.http.routers.netmaker-ui.rule=Host(`netmaker-dashboard.{{ netmaker.base_domain }}`)
+      - traefik.http.services.netmaker-ui.loadbalancer.server.port=80 #}
+
+  {#  coredns: # The DNS Server. CoreDNS can be removed unless doing special advanced use cases
+     image: coredns/coredns
+     command: -conf /root/dnsconfig/Corefile
+     depends_on:
+       - netmaker
+     restart: unless-stopped
+     volumes:
+       - ./dnsconfig/:/root/dnsconfig #}
+
+  mosquitto: # the MQTT broker for netmaker
+    image: eclipse-mosquitto:2.0.11-openssl
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/logs:/mosquitto/log
+    ports:
+      - "8883:8883"
+    depends_on:
+      - netmaker
+    command: ["/mosquitto/config/wait.sh"]
+    environment:
+      NETMAKER_SERVER_HOST: "http://netmaker:8081"
+{#     labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.mqtts.rule=HostSNI(`netmaker-broker.{{ netmaker.base_domain }}`)
+      - traefik.tcp.routers.mqtts.tls.passthrough=true
+      - traefik.tcp.services.mqtts-svc.loadbalancer.server.port=8883 #}
+
+  {# traefik: # the default proxy - can be replaced with caddy or nginx, but requires careful configuration
+    image: traefik:v2.6
+    command:
+      - "--certificatesresolvers.http.acme.email=YOUR_EMAIL"
+      - "--certificatesresolvers.http.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.http.acme.tlschallenge=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=http"
+      - "--log.level=INFO"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--serverstransport.insecureskipverify=true"
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    ports:
+      - "443:443" #}

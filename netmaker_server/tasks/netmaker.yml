@@ -1,0 +1,29 @@
+- name: Start rest of netmaker-services
+  command: "docker-compose --project-directory /opt/netmaker_server/ up -d"
+  register: command
+  failed_when: command.rc != 0
+
+- name: Wait for netmaker-api to become available
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 8081
+    state: started
+  when: "inventory_hostname == groups['netmaker'][0]"
+
+- name: Create default mesh-network 'server'
+  uri:
+    url: 'http://netmaker-api.{{ netmaker.base_domain }}:8081/api/networks'
+    method: POST
+    body:
+      netid: servers
+      addressrange: 10.92.0.0/24
+      addressrange6: fd92::/64
+    body_format: json
+    headers:
+      Authorization: 'Bearer {{ netmaker.master_key }}'
+      Content-Type: application/json
+  when: "inventory_hostname == groups['netmaker'][0]"
+  register: default_mesh_ok
+  until: "default_mesh_ok is not failed"
+  retries: 2
+  delay: 10
