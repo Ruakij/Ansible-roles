@@ -15,10 +15,10 @@ component netmaker_server {
   ng_stream -down-( mq_tls
 
   component rqlite
-  rqlite -up- rq_http
+  rqlite -right- rq_http
   rqlite -up- rq_cluster
   ng_stream --down-( rq_cluster
-  ng_http --down-( rq_http
+  ng_http -down-( rq_http
 
   component nm_ui
   nm_ui -up- nm_ui_http
@@ -27,7 +27,7 @@ component netmaker_server {
   component nm_api
   nm_api -up- nm_api_http
   ng_http -down-( nm_api_http
-  nm_api --( rq_http
+  nm_api -( rq_http
 }
 ng_TLS -down- ng_stream
 
