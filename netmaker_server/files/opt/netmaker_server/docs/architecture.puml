@@ -1,9 +1,13 @@
 @startuml
 
+interface ng_TLS
+
 component netmaker_server {
   component nginx {
     component ng_stream
     component ng_http
+
+    ng_stream -up- ng_TLS 
 
     ng_stream -right-> ng_http : tls-termination
   }
@@ -29,6 +33,5 @@ component netmaker_server {
   ng_http -down-( nm_api_http
   nm_api -( rq_http
 }
-ng_TLS -down- ng_stream
 
 @enduml
