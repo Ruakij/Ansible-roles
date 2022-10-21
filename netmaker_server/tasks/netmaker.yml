@@ -4,26 +4,54 @@
   failed_when: command.rc != 0
 
 - name: Wait for netmaker-api to become available
-  ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
-    port: 8081
-    state: started
-  when: "inventory_hostname == groups['netmaker'][0]"
+  uri:
+    url: 'https://{{ netmaker_api.host }}.{{ netmaker_base_domain }}:{{ netmaker_nginx.advertise_port }}'
+    return_content: yes
+    validate_certs: no
+    status_code:
+      - 404
+  until: uri_output.status == 404
+  retries: 24 # Retries for 24 * 5 seconds = 120 seconds = 2 minutes
+  delay: 5 # Every 5 seconds
+  register: uri_output
+
+# todo: check if exists?
 
 - name: Create default mesh-network 'server'
   uri:
-    url: 'http://netmaker-api.{{ netmaker.base_domain }}:8081/api/networks'
+    validate_certs: no
+    url: 'https://{{ netmaker_api.host }}.{{ netmaker_base_domain }}:{{ netmaker_nginx.advertise_port }}/api/networks'
     method: POST
     body:
-      netid: servers
+      netid: servnet
       addressrange: 10.92.0.0/24
       addressrange6: fd92::/64
     body_format: json
     headers:
-      Authorization: 'Bearer {{ netmaker.master_key }}'
+      Authorization: 'Bearer {{ netmaker_creds.master_key }}'
       Content-Type: application/json
   when: "inventory_hostname == groups['netmaker'][0]"
-  register: default_mesh_ok
-  until: "default_mesh_ok is not failed"
+  register: default_mesh
+  until: "default_mesh is not failed"
+  retries: 2
+  delay: 10
+
+# todo: check if exists?
+
+- name: Create token for default-network
+  uri:
+    validate_certs: no
+    url: 'https://{{ netmaker_api.host }}.{{ netmaker_base_domain }}:{{ netmaker_nginx.advertise_port }}/api/networks/servnet/keys' # todo: do implementation
+    method: POST
+    body:
+      name: ""
+      uses: 0
+    body_format: json
+    headers:
+      Authorization: 'Bearer {{ netmaker_creds.master_key }}'
+      Content-Type: application/json
+  when: "inventory_hostname == groups['netmaker'][0]"
+  register: default_mesh_key
+  until: "default_mesh_key is not failed"
   retries: 2
   delay: 10
