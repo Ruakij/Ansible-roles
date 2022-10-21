@@ -7,7 +7,12 @@
     path: /opt/netmaker_server/certs/node.csr
     privatekey_path: /opt/netmaker_server/certs/node.key
     common_name: "{{ ansible_facts.nodename }}"
-    subject_alt_name: "DNS:*.{{ ansible_facts.nodename }},DNS:*.{{ netmaker.base_domain }}"
+    subject_alt_name: 
+     "DNS:{{ netmaker_rqlite.http_host }}.{{ ansible_facts.nodename }},\
+      DNS:{{ netmaker_rqlite.cluster_host }}.{{ ansible_facts.nodename }},\
+      DNS:{{ netmaker_broker.tls_host }}.{{ netmaker_base_domain }},\
+      DNS:{{ netmaker_api.host }}.{{ netmaker_base_domain }},\
+      DNS:{{ netmaker_ui.host }}.{{ netmaker_base_domain }}"
 
 - name: Fetch CSR
   ansible.builtin.fetch:
