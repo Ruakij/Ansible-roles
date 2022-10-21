@@ -14,21 +14,12 @@ stream{
         default         127.0.0.1:1;
     }
 
-    # Enable Proxy-Protocol for local calls
-    map $target_host $proxy_protocol_enabled { 
-        hostnames;
-
-        127.0.0.1*      on;
-        default         off;
-    }
-
     server {
         resolver 127.0.0.11; # Explicitly set docker-resolver
         
         listen      443;
         ssl_preread on;
 
-        proxy_protocol $proxy_protocol_enabled;
         proxy_pass  $name;
     }
 }
