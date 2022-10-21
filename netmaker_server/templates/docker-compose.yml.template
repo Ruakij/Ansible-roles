@@ -26,10 +26,7 @@ services:
     -raft-addr     [::]:4002
     -raft-adv-addr {{  netmaker_rqlite.cluster_host }}.{{ ansible_facts.nodename }}:{{ netmaker_nginx.advertise_port }}
 
-    -http-ca-cert /certs/ca.crt
-
     -node-encrypt
-    -node-ca-cert /certs/ca.crt
     -node-cert    /certs/node.crt
     -node-key     /certs/node.key
     -node-no-verify
