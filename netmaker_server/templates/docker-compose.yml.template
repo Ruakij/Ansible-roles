@@ -123,6 +123,7 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/logs:/mosquitto/log
+      - "./certs:/certs:ro"
     depends_on:
       - netmaker
     command: ["/mosquitto/config/wait.sh"]

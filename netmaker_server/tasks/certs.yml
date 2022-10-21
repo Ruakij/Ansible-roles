@@ -1,6 +1,7 @@
 - name: Generate PrivateKey
   community.crypto.openssl_privatekey:
     path: /opt/netmaker_server/certs/node.key
+    owner: 1883   #  Set owner to mosquitto-user (all other containers seem to run as root)
 
 - name: Generate Certificate-Signing-Request from privateKey
   community.crypto.openssl_csr:
