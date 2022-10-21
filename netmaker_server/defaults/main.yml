@@ -1,0 +1,28 @@
+# Overwrite for specific nodes to force dynamic-ip (disable setting public-ip and forces external lookup for public-ip)
+#  When false, will check itself for dynamic-ip (based on private-ip)
+netmaker_dynamicIp: false
+
+netmaker_nginx:
+  # Listen-port
+  tls_port:       51820
+  # Advertise-Port for services
+  #  (must also be reachable by internal services!)
+  advertise_port: 51820
+
+# This is the base-domain used for generating hostnames for services
+netmaker_base_domain: 
+
+# host + base_domain
+netmaker_api:
+  host: netmaker-api
+netmaker_ui:
+  host: netmaker-ui
+# MQTT-broker
+netmaker_broker:
+  tls_host:     netmaker-broker
+
+# host + node_hostname
+netmaker_rqlite:
+  http_host:    netmaker-rqlite-http
+  cluster_host: netmaker-rqlite-cluster
+    
