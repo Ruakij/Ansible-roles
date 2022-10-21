@@ -1,5 +1,5 @@
 [{
     "username": "netmaker",
-    "password": "{{ netmaker.rqlite_password }}",
+    "password": "{{ netmaker_creds.rqlite_password }}",
     "perms": ["all"]
 }]

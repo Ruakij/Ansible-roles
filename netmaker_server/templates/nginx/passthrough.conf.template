@@ -1,0 +1,34 @@
+stream{
+    # Map target-hosts based on hostname
+    map $ssl_preread_server_name $target_host {
+        hostnames;  # Enable matching including prefix/suffix-mask
+
+        {{ netmaker_ui.host }}.{{ netmaker_base_domain }}   127.0.0.1:8443;
+        {{ netmaker_api.host }}.{{ netmaker_base_domain }}  127.0.0.1:8443;
+
+        {{ netmaker_broker.tls_host }}.{{ netmaker_base_domain }}   mosquitto:8883; # todo: tls-terminate?
+
+        {{ netmaker_rqlite.http_host }}.{{ ansible_facts.nodename }}    127.0.0.1:8443;
+        {{ netmaker_rqlite.cluster_host }}.{{ ansible_facts.nodename }}   rqlite:4002;
+
+        default         127.0.0.1:1;
+    }
+
+    # Enable Proxy-Protocol for local calls
+    map $target_host $proxy_protocol_enabled { 
+        hostnames;
+
+        127.0.0.1*      on;
+        default         off;
+    }
+
+    server {
+        resolver 127.0.0.11; # Explicitly set docker-resolver
+        
+        listen      443;
+        ssl_preread on;
+
+        proxy_protocol $proxy_protocol_enabled;
+        proxy_pass  $name;
+    }
+}

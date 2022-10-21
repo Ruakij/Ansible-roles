@@ -1,3 +1,11 @@
+- name: Deploy nginx configs
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dst}}"
+  loop:
+    - { src: 'nginx/proxy.conf.template',       dst: '/opt/netmaker_server/nginx/conf/conf.d/proxy.conf' }
+    - { src: 'nginx/passthrough.conf.template', dst: '/opt/netmaker_server/nginx/conf/stream.d/passthrough.conf' }
+
 - name: Start nginx service
   command: "docker-compose --project-directory /opt/netmaker_server/ up -d nginx"
   register: command
