@@ -1,0 +1,4 @@
+netclient:
+  # Token to join default-network
+  #  leave empty to ignore
+  join_network_token:
