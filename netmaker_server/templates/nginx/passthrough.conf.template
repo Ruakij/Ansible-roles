@@ -20,6 +20,6 @@ stream{
         listen      443;
         ssl_preread on;
 
-        proxy_pass  $name;
+        proxy_pass  $target_host;
     }
 }
