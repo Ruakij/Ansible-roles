@@ -2,3 +2,4 @@
   when: "netclient.join_network_token is defined"
   command: "netclient join -t {{ netclient.join_network_token }}"
   failed_when: command.rc != 0
+  register: command
