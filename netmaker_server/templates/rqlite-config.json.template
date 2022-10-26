@@ -1,0 +1,5 @@
+[{
+    "username": "netmaker",
+    "password": "{{ netmaker_creds.rqlite_password }}",
+    "perms": ["all"]
+}]

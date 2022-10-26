@@ -1,0 +1,27 @@
+map $host    $proxy_name {
+    hostnames;
+    
+    {{ netmaker_ui.host }}.{{ netmaker_base_domain }}               netmaker-ui:80;
+    {{ netmaker_api.host }}.{{ netmaker_base_domain }}              netmaker:8081;
+    
+    {{ netmaker_rqlite.http_host }}.{{ ansible_facts.nodename }}    rqlite:4001;
+
+    default         444;
+}
+
+server {
+    resolver 127.0.0.11; # Explicitly set docker-resolver
+
+    listen 8443 ssl;
+
+    ssl_certificate /certs/node.crt;
+    ssl_certificate_key /certs/node.key;
+
+    if ($proxy_name = 444){
+        return 444;
+    }
+
+    location / {
+        proxy_pass http://$proxy_name;
+    }
+}
