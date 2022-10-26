@@ -3,3 +3,4 @@
   command: "netclient join -t {{ netclient.join_network_token }}"
   failed_when: command.rc != 0
   register: command
+  throttle: 1
