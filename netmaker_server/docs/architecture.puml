@@ -30,7 +30,7 @@ component netmaker_server {
   component nm_api
   nm_api -down- nm_api_http
   ng_http --( nm_api_http
-  nm_api -up-( ng_TLS : db-connection to rqlite-master
+  nm_api .up.( ng_TLS : db-connection to rqlite-master
   nm_api --( mq_plain
 }
 
