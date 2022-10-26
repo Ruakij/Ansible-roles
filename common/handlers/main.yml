@@ -1,0 +1,2 @@
+- name: reload_sysctl
+  command: sysctl --system
