@@ -1,0 +1,4 @@
+- name: Deploy CA Certificate
+  ansible.builtin.copy:
+    src: secret_files/netmaker_server/ca/ca.crt
+    dest: /etc/ssl/certs/netmaker-ca.pem
