@@ -1,10 +1,24 @@
+- name: Check if containerd-service exists & is started
+  service:
+    name: containerd
+    state: started
+  ignore_errors: true
+  register: containerd_status
+  
+- name: Install containerd when not exists
+  package:
+    name:
+      - containerd
+  when: containerd_status is failed
+
+- name: Create containerd config-folder
+  file:
+    path: /etc/containerd
+    state: directory
+
 - name: Deploy containerd-config
   ansible.builtin.copy:
     src: containerd_config.toml
     dest: /etc/containerd/config.toml
     mode: u=rw,g=r,o=r
-
-- name: restart_containerd
-  ansible.builtin.service:
-    name: containerd
-    state: restarted
+  notify: restart_containerd
