@@ -1,2 +1,10 @@
-- name: Disable swap
-  command: swapoff -a
+- name: Disable swap-mounts
+  replace:
+    path: /etc/fstab
+    regexp: '^([ \t]*(?!#)\S+[ \t]+swap[ \t]+.*)'
+    replace: '# \1'
+
+- name: Disable active swap immediately
+  command: swapoff -va
+  changed_when: "command.stdout != ''"
+  register: command
