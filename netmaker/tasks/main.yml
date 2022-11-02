@@ -3,3 +3,6 @@
 - import_tasks: ./install.yml
 
 - import_tasks: ./join-network.yml
+
+- name: Gather facts to get changes
+  ansible.builtin.gather_facts:
