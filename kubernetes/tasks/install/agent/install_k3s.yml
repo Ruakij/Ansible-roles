@@ -1,0 +1,7 @@
+- name: Install K3s agent
+  command: /root/k3s_install.sh {{ type }} 
+  register: command
+  changed_when: "'No change detected' in command.stdout"
+  until: "command is not failed"
+  retries: 2
+  delay: 10

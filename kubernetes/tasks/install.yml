@@ -1,0 +1,29 @@
+- name: Create k3s-folder
+  ansible.builtin.file:
+    path: /etc/rancher/k3s/
+    state: directory
+    mode: '0755'
+
+- name: Deploy k3s config
+  ansible.builtin.template:
+    src: k3s/{{ type }}/config.yaml.jinja2
+    dest: /etc/rancher/k3s/config.yaml
+
+- name: Download install-script
+  get_url:
+    url: https://get.k3s.io
+    dest: /root/k3s_install.sh
+    mode:  '744'
+# todo: update when file changed?
+
+- import_tasks: ./install/server/setup_network.yml
+  when: "type == 'server'"
+
+- import_tasks: ./install/server/install_helm.yml
+  when: "type == 'server'"
+
+- import_tasks: ./install/server/install_k3s.yml
+  when: "type == 'server'"
+
+- import_tasks: ./install/agent/install_k3s.yml
+  when: "type == 'agent'"

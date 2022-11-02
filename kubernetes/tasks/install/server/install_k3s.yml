@@ -1,0 +1,36 @@
+- name: Install K3s-server for 1st-node
+  command: /root/k3s_install.sh {{ type }} 
+  when: "inventory_hostname == groups['kubernetes'][0]"
+  register: command
+  changed_when: "'No change detected' in command.stdout"
+
+- name: Waiting for K3s-server to accept connections
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 6443
+    state: started
+  when: "inventory_hostname == groups['kubernetes'][0]"
+
+- name: Install K3s-server for other nodes
+  command: /root/k3s_install.sh {{ type }}
+  when: "inventory_hostname != groups['kubernetes'][0]"
+  register: command
+  changed_when: "'No change detected' in command.stdout"
+  until: "command is not failed"
+  retries: 2
+  delay: 10
+
+- name: Waiting for K3s-server to accept connections on other nodes
+  ansible.builtin.wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 6443
+    state: started
+  when: "inventory_hostname != groups['kubernetes'][0]"
+
+#- name: Add Kubernetes environment-vars to /etc/profile.d/
+#  blockinfile:
+#    path: /etc/profile.d/k3s-bin.sh
+#    marker: "# {mark} ANSIBLE MANAGED BLOCK | k3s"
+#    block: |
+#      export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+#    create: true

@@ -1,0 +1,19 @@
+- name: reload_sysctl
+  command: sysctl --system
+
+- name: restart_containerd
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+
+- name: reload_networking
+  service:
+    name: networking
+    state: restarted
+  async: 5
+  poll: 0
+  notify: wait_for_connection
+
+- name: wait_for_connection
+  wait_for_connection:
+    delay: 5

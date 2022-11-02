@@ -1,0 +1,33 @@
+@startuml
+
+rectangle "Control-Plane" as control_plane {
+    rectangle "Node" as sn1 {
+        component "netclient" as sn1_netclient
+
+        component etcd as sn1_etcd
+        component "k3s-server" as sn1_k3s_server
+        sn1_k3s_server - sn1_etcd
+    }
+
+    rectangle "Node" as sn2 {
+        component "netclient" as sn2_netclient
+
+        component etcd as sn2_etcd
+        component "k3s-server" as sn2_k3s_server
+        sn2_k3s_server - sn2_etcd
+    }
+
+    sn1_netclient -- sn2_netclient
+    sn1_etcd -- sn2_etcd
+}
+
+rectangle "Workers" {
+    rectangle "Node" as an1 {
+        component "netclient" as an1_netclient
+
+        component "k3s-agent" as sn1_k3s_agent
+    }
+}
+
+
+@enduml

@@ -1,0 +1,6 @@
+- name: Set control-plane-dns-endpoint towards local-ip
+  blockinfile:
+      path: /etc/hosts
+      marker: "# {mark} ANSIBLE MANAGED BLOCK | k3s"
+      block: |
+        {{ nodeip_ipv4 }} {{ kubernetes.control_plane.dns_name }}
