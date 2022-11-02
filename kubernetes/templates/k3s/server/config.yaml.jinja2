@@ -1,0 +1,23 @@
+## Base ##
+{% if inventory_hostname == groups['kubernetes'][0] %}
+cluster-init: true
+{% else %}
+server: https://{{ groups['kubernetes'][0] }}:6443
+{% endif %}
+
+token: {{ kubernetes.token }}
+tls-san:
+  - {{ kubernetes.control_plane.dns_name }}
+
+# Networking
+node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
+cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}   
+
+egress-selector-mode: disabled
+
+# Network-plugin
+flannel-backend: vxlan
+
+# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
+kubelet-arg: "--node-ip=0.0.0.0"

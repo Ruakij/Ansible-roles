@@ -1,0 +1,17 @@
+---
+kubernetes:
+  ipPool:
+    ipv4:
+      cluster_cidr: 10.42.0.0/16
+      service_cidr: 10.43.0.0/16
+    ipv6:
+      cluster_cidr: fd42::/56
+      service_cidr: fd43::/112
+
+    # Replace - with _
+    nodeIp_interface: <interface to grab nodeIp from>
+
+  control_plane:
+    dns_name: <control-plane dns-reachable-name>
+
+  token: <shared token for nodes to join>

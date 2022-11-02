@@ -1,0 +1,35 @@
+#- name: Load br_netfilter kernel-module
+#  modprobe:
+#      name: br_netfilter
+#      state: present
+
+- name: Set sysctl settings for iptables bridged traffic
+  copy:
+    dest: "/etc/sysctl.d/kubernetes.conf"
+    content: |
+        net.bridge.bridge-nf-call-ip6tables = 1
+        net.bridge.bridge-nf-call-iptables = 1
+
+        net.ipv4.conf.all.forwarding=1
+        net.ipv6.conf.all.forwarding=1
+  notify: reload_sysctl
+
+#- name: Disable swap
+#  command: swapoff -a
+
+#- name: Install iptables
+#  package:
+#      name:
+#          #- containerd
+#          - iptables
+#      state: latest
+
+-  import_tasks: ./prerequisites/containerd.yml
+
+- name: Getting nodeIp-data from interface
+  set_fact:
+    nodeip_ipv4: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv4.address }}"
+    nodeip_ipv6: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv6[0].address }}"
+
+- name: Run handlers to reload configurations
+  meta: flush_handlers

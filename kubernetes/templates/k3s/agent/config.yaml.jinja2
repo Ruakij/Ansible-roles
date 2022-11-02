@@ -1,0 +1,7 @@
+server: https://{{ kubernetes.control_plane.dns_name }}:6443
+token: {{ kubernetes.token }}
+
+node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
+
+# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
+kubelet-arg: "--node-ip=0.0.0.0"
