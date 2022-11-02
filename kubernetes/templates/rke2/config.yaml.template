@@ -13,4 +13,4 @@ tls-san:
 
 cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}
 service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}
-node-ip:      {{ ipPool_ipv4_nodeip }},{{ ipPool_ipv6_nodeip }}
+node-ip:      {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}

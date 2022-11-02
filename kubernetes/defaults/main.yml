@@ -8,7 +8,8 @@ kubernetes:
     ipv6:
       cluster_cidr: fd42::/56
       service_cidr: fd43::/112
-      nodeip_cidr: fd41::/64
+
+    nodeIp_interface: <interface to grab nodeIp from>
 
   control_plane:
     dns_name: <control-plane dns-reachable-name>

@@ -49,41 +49,21 @@
     mode: u=rw,g=r,o=r
   notify: restart_containerd
 
+# todo: Move to netmaker-role as handler?
+- name: Gather facts to get changes
+  ansible.builtin.gather_facts:
+
+- name: Getting nodeIp-data from interface
+  set_fact:
+    nodeip_ipv4: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv4.address }}"
+    nodeip_ipv6: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv6[0].address }}"
+
 - name: Set control-plane-dns-endpoint towards local-ip
-  lineinfile:
-    dest: /etc/hosts
-    line: "{{ ansible_facts.default_ipv6.address }} k8s-control-plane.system.ruekov.eu" 
-
-- name: Setting network facts..
-  set_fact:
-    inventory_group_index: "{{ groups['kubernetes'].index(inventory_hostname) }}"
-    ipPool_ipv6_nodeip_cidr_only_prefix:  '{{ kubernetes.ipPool.ipv6.nodeip_cidr | regex_replace ("(?<=:)[0-9a-f]{0,4}(\/[0-9]+)?$","") }}'
-    ipPool_ipv6_nodeip_cidr_cidr:         '{{ kubernetes.ipPool.ipv6.nodeip_cidr | regex_replace ("^.*?\/","") }}'
-    ipPool_ipv4_nodeip_cidr_only_prefix:  '{{ kubernetes.ipPool.ipv4.nodeip_cidr | regex_replace ("(?<=.)[0-9]{0,3}(\/[0-9]+)?$","") }}'
-    ipPool_ipv4_nodeip_cidr_cidr:         '{{ kubernetes.ipPool.ipv4.nodeip_cidr | regex_replace ("^.*?\/","") }}'
-  
-- name: Setting more network_facts..
-  set_fact:
-    ipPool_ipv6_nodeip: "{{ ipPool_ipv6_nodeip_cidr_only_prefix }}{{ inventory_group_index|int +1 }}"
-    ipPool_ipv4_nodeip: "{{ ipPool_ipv4_nodeip_cidr_only_prefix }}{{ inventory_group_index|int +1 }}"
-
-- name: Setup IPv4-Network
-  lineinfile:
-    insertafter: "iface {{ ansible_facts.default_ipv4.interface }} inet .+"
-    dest: "/etc/network/interfaces"
-    line: "    up /usr/sbin/ip addr add {{ ipPool_ipv4_nodeip }} dev {{ ansible_facts.default_ipv4.interface }}"
-  register: setup_network_ipv4
-
-- name: Setup IPv6-Network
-  lineinfile:
-    insertafter: "iface {{ ansible_facts.default_ipv4.interface }} inet6 .+"
-    dest: "/etc/network/interfaces"
-    line: "    up /usr/sbin/ip -6 addr add {{ ipPool_ipv6_nodeip }} dev {{ ansible_facts.default_ipv4.interface }}"
-  register: setup_network_ipv6
-
-- name: Force-Reload network-interface
-  command: "ifup --force {{ ansible_facts.default_ipv4.interface }}"
-  when: setup_network_ipv4.changed or setup_network_ipv6.changed
+  blockinfile:
+      path: /etc/hosts
+      marker: "# {mark} ANSIBLE MANAGED BLOCK | k8s"
+      block: |
+        {{ nodeip_ipv4 }} {{ kubernetes.control_plane.dns_name }}
 
 - name: Run handlers to reload configurations
   meta: flush_handlers
