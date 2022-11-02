@@ -1,0 +1,30 @@
+@startuml
+
+component netmaker as nm1
+component netmaker as nm2
+component ... as nm3
+
+interface interface as if1
+interface interface as if2
+interface ... as if3
+
+component kubernetes as kn1
+component kubernetes as kn2
+component ... as kn3
+
+nm1 -up- if1
+kn1 -down-( if1
+
+nm2 -up- if2
+kn2 -down-( if2
+
+nm3 -up- if3
+kn3 -down-( if3
+
+nm1 -right- nm2
+nm2 -right- nm3
+
+kn1 .right. kn2
+kn2 .right. kn3
+
+@enduml
