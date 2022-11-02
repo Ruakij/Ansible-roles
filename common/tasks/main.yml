@@ -5,3 +5,5 @@
 - import_tasks: ./packages.yml
 
 - import_tasks: ./aliases.yml
+
+- import_tasks: ./networking.yml
