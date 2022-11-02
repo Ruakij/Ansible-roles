@@ -1,0 +1,22 @@
+- name: Set sysctl settings for ip-forwarding
+  copy:
+      dest: "/etc/sysctl.d/ip-forwarding.conf"
+      content: |
+          net.ipv4.ip_forward           = 1
+          net.ipv6.conf.all.forwarding  = 1
+  notify: reload_sysctl
+
+- name: Set sysctl settings for ipv6-address-generation
+  copy:
+      dest: "/etc/sysctl.d/ipv6-slaac-address-generation.conf"
+      content: |
+          net.ipv6.conf.default.addr_gen_mode = 2
+          net.ipv6.conf.default.stable_secret = {{ ipv6_stable_secret }}
+  notify: reload_sysctl
+
+- name: Set sysctl settings to override ipv6-slaac with enabled forwarding
+  copy:
+      dest: "/etc/sysctl.d/ipv6-slaac-override.conf"
+      content: |
+          net.ipv6.conf.all.accept_ra = 2
+  notify: reload_sysctl
