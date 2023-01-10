@@ -33,9 +33,9 @@ services:
 
     -auth         /config.json
 
-{% if inventory_hostname != groups['netmaker'][0] %}
+{% if inventory_hostname != groups['netmaker_server'][0] %}
     -join-as  netmaker
-    -join     https://{{  netmaker_rqlite.http_host }}.{{ groups['netmaker'][0] }}:{{ netmaker_nginx.advertise_port }}
+    -join     https://{{  netmaker_rqlite.http_host }}.{{ groups['netmaker_server'][0] }}:{{ netmaker_nginx.advertise_port }}
 {% endif %}
     "
     # FIXME: /\ \/ Change http -> https

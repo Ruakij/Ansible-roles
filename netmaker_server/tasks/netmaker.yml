@@ -30,7 +30,7 @@
     headers:
       Authorization: 'Bearer {{ netmaker_creds.master_key }}'
       Content-Type: application/json
-  when: "inventory_hostname == groups['netmaker'][0]"
+  when: "inventory_hostname == groups['netmaker_server'][0]"
   register: default_mesh
   until: "default_mesh is not failed"
   retries: 2
@@ -50,7 +50,7 @@
     headers:
       Authorization: 'Bearer {{ netmaker_creds.master_key }}'
       Content-Type: application/json
-  when: "inventory_hostname == groups['netmaker'][0]"
+  when: "inventory_hostname == groups['netmaker_server'][0]"
   register: default_mesh_key
   until: "default_mesh_key is not failed"
   retries: 2
