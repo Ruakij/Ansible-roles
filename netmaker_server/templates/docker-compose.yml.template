@@ -33,15 +33,15 @@ services:
 
     -auth         /config.json
 
-{% if inventory_hostname != groups['netmaker'][0] %}
+{% if inventory_hostname != groups['netmaker_server'][0] %}
     -join-as  netmaker
-    -join     https://{{  netmaker_rqlite.http_host }}.{{ groups['netmaker'][0] }}:{{ netmaker_nginx.advertise_port }}
+    -join     https://{{  netmaker_rqlite.http_host }}.{{ groups['netmaker_server'][0] }}:{{ netmaker_nginx.advertise_port }}
 {% endif %}
     "
     # FIXME: /\ \/ Change http -> https
 
   netmaker: # The Primary Server for running Netmaker
-    image: gravitl/netmaker:v0.16.1
+    image: gravitl/netmaker:v0.17.1
     depends_on:
       - rqlite
     cap_add: 
@@ -104,7 +104,7 @@ services:
       - "51821-51830:51821-51830/udp" # wireguard ports
 
   netmaker-ui:  # The Netmaker UI Component
-    image: gravitl/netmaker-ui:v0.16.1
+    image: gravitl/netmaker-ui:v0.17.1
     depends_on:
       - netmaker
     links:
@@ -120,7 +120,6 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/logs:/mosquitto/log
-      - "./certs:/certs:ro"
     depends_on:
       - netmaker
     command: ["/mosquitto/config/wait.sh"]
