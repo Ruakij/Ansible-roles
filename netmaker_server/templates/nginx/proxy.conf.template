@@ -3,7 +3,9 @@ map $host    $proxy_name {
     
     {{ netmaker_ui.host }}.{{ netmaker_base_domain }}               netmaker-ui:80;
     {{ netmaker_api.host }}.{{ netmaker_base_domain }}              netmaker:8081;
-    
+
+    {{ netmaker_broker.tls_host }}.{{ netmaker_base_domain }}       mosquitto:8883;
+
     {{ netmaker_rqlite.http_host }}.{{ ansible_facts.nodename }}    rqlite:4001;
 
     default         444;
