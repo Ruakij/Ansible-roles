@@ -1,5 +1,5 @@
 - name: Install K3s-server for 1st-node
-  command: /root/k3s_install.sh {{ type }} 
+  command: /root/k3s_install.sh {{ type }}
   when: "inventory_hostname == groups['kubernetes'][0]"
   register: command
   changed_when: "'No change detected' in command.stdout"
@@ -26,7 +26,6 @@
     port: 6443
     state: started
   when: "inventory_hostname != groups['kubernetes'][0]"
-
 #- name: Add Kubernetes environment-vars to /etc/profile.d/
 #  blockinfile:
 #    path: /etc/profile.d/k3s-bin.sh

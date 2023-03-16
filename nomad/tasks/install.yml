@@ -1,0 +1,43 @@
+- name: Download binary
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: https://releases.hashicorp.com/nomad/{{ nomad.version }}/nomad_{{ nomad.version }}_{{ ansible_system | lower }}_{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}.zip
+    dest: /usr/local/bin/
+    mode: "755"
+
+- name: Deploy systemd-service file
+  ansible.builtin.copy:
+    src: systemd-service
+    dest: /etc/systemd/system/nomad.service
+    mode: u=rw,g=r,o=r
+
+- name: Create nomad user
+  ansible.builtin.user:
+    name: nomad
+    groups:
+      - docker
+    append: true
+
+- name: Create directory for configs
+  ansible.builtin.file:
+    path: /etc/nomad.d
+    state: directory
+    mode: "0755"
+    owner: "nomad"
+    group: "nomad"
+
+- name: Create nomad.hcl configuration file
+  ansible.builtin.template:
+    src: nomad.hcl.j2
+    dest: /etc/nomad.d/nomad.hcl
+    mode: "0644"
+    owner: "nomad"
+    group: "nomad"
+
+- name: Create directory for data
+  ansible.builtin.file:
+    path: /opt/nomad
+    state: directory
+    mode: "0755"
+    owner: "nomad"
+    group: "nomad"

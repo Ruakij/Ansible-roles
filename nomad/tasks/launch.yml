@@ -1,0 +1,8 @@
+- name: Start service
+  ansible.builtin.service:
+    name: nomad
+    state: restarted
+
+- name: Waiting for service to accept connections
+  ansible.builtin.wait_for:
+    port: 4646
