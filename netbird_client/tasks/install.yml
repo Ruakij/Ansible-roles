@@ -1,0 +1,26 @@
+- name: Install Packages
+#  when: docker_file.stat.exists == False
+  package:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+
+- name: Add netbird-key
+  apt_key:
+    url: https://pkgs.wiretrustee.com/debian/public.key
+    state: present
+
+- name: Add netbird-repository
+  apt_repository:
+    repo: "deb https://pkgs.wiretrustee.com/debian stable main"
+    state: present
+    filename: netbird
+    update_cache: yes
+
+- name: Install wireguard & netbird
+  package:
+    name:
+      - wireguard
+      - netbird
+    state: latest

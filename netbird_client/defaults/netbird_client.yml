@@ -1,0 +1,6 @@
+netbird_client:
+  # Key and url to join a network
+  #  leave empty to ignore
+  join_network:
+    setup_key: 
+    management_url: 
