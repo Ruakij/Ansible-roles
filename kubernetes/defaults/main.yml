@@ -15,3 +15,7 @@ kubernetes:
     dns_name: <control-plane dns-reachable-name>
 
   token: <shared token for nodes to join>
+
+  # One of [flannel, calico]
+  network_plugin: calico
+

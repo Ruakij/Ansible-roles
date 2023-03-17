@@ -1,0 +1,43 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: routingtabletowg
+  namespace: calico-system
+  labels:
+    app: routingtabletowg
+spec:
+  selector:
+    matchLabels:
+      app: routingtabletowg
+  template:
+    metadata:
+      labels:
+        app: routingtabletowg
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      hostNetwork: true
+      containers:
+        - name: routingtabletowg
+          image: "ruakij/routingtabletowg:0.1.2"
+          env:
+            - name: INTERFACE
+              value: {{ kubernetes.ipPool.nodeIp_interface }}
+            - name: FILTER_PROTOCOL
+              value: bird
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10Mi
+            limits:
+              cpu: 20m
+              memory: 20Mi
+---

@@ -1,0 +1,6 @@
+- name: Deploy service-file for routing-table to wireguard-translation
+  ansible.builtin.template:
+    src: ./k3s/server/network-plugin/calico/routingtabletowg.yml.jinja2
+    dest: /var/lib/rancher/k3s/server/manifests/routingtabletowg.yml
+    mode: u=rw,g=r,o=r
+  run_once: true

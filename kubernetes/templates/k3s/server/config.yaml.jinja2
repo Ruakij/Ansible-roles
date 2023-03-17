@@ -17,7 +17,12 @@ service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv
 egress-selector-mode: disabled
 
 # Network-plugin
+{% if kubernetes.network_plugin == "flannel" %}
 flannel-backend: vxlan
+{% else %}
+disable-network-policy: true
+flannel-backend: none
+{% endif %}
 
 # FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
 kubelet-arg: "--node-ip=0.0.0.0"

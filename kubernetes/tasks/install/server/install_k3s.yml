@@ -34,3 +34,7 @@
 #    block: |
 #      export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 #    create: true
+
+- name: Deploy calico
+  import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_calico.yml
+  when: "kubernetes.network_plugin == 'calico'"
