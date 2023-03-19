@@ -15,11 +15,13 @@ spec:
       natOutgoing: Enabled
       nodeSelector: all()
 
+{% if nodeip_ipv6 != "" and kubernetes.ipPool.ipv6 is defined %}
     - blockSize: 122
       cidr: {{ kubernetes.ipPool.ipv6.cluster_cidr }}
       encapsulation: None
       natOutgoing: Enabled
       nodeSelector: all()
+{% endif %}
 
 ---
 
