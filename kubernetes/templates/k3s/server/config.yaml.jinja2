@@ -1,5 +1,6 @@
 ## Base ##
 {% if inventory_hostname == groups['kubernetes'][0] %}
+# Initialize with internal etcd
 cluster-init: true
 {% else %}
 server: https://{{ groups['kubernetes'][0] }}:6443
