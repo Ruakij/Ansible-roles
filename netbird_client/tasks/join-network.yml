@@ -11,3 +11,6 @@
     state: present
   when: command.changed
 
+- name: Gather facts to get changes
+  ansible.builtin.gather_facts:
+  when: command.changed
