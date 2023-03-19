@@ -6,7 +6,7 @@ cluster-init: true
 server: https://{{ groups['kubernetes'][0] }}:6443
 {% endif %}
 
-token: {{ kubernetes.token }}
+token: '{{ kubernetes.token }}'
 tls-san:
   - {{ kubernetes.control_plane.dns_name }}
 
