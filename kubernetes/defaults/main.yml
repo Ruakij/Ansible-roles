@@ -19,3 +19,5 @@ kubernetes:
   # One of [flannel, calico]
   network_plugin: calico
 
+  # One of [traefik-ingress]
+  ingress_controller: traefik-ingress

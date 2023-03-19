@@ -24,5 +24,7 @@ disable-network-policy: true
 flannel-backend: none
 {% endif %}
 
-# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
-kubelet-arg: "--node-ip=0.0.0.0"
+# Ingress-plugin
+{% if kubernetes.ingress_controller != "traefik-ingress" %}
+disable: traefik
+{% endif %}
