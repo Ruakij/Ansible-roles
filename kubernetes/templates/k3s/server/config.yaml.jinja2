@@ -11,9 +11,18 @@ tls-san:
   - {{ kubernetes.control_plane.dns_name }}
 
 # Networking
+{% if nodeip_ipv6 != "" and kubernetes.ipPool.ipv6 is defined %}
 node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
 cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}
-service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}   
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}  
+
+# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
+kubelet-arg: "--node-ip=0.0.0.0"
+{% else %}
+node-ip: {{ nodeip_ipv4 }}
+cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }}
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }}
+{% endif %}
 
 egress-selector-mode: disabled
 
