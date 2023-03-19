@@ -3,7 +3,7 @@
 # Initialize with internal etcd
 cluster-init: true
 {% else %}
-server: https://{{ groups['kubernetes'][0] }}:6443
+server: https://{{ hostvars[groups['kubernetes'][0]]['nodeip_ipv4'] }}:6443
 {% endif %}
 
 token: '{{ kubernetes.token }}'
