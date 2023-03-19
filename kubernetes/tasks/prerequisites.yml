@@ -29,10 +29,14 @@
 
 -  import_tasks: ./prerequisites/containerd.yml
 
+- name: Gather interface-name
+  set_fact:
+    interface: "{{ kubernetes.ipPool.nodeIp_interface | replace('-', '_') }}"
+
 - name: Getting nodeIp-data from interface
   set_fact:
-    nodeip_ipv4: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv4.address }}"
-    nodeip_ipv6: "{{ ansible_facts[ kubernetes.ipPool.nodeIp_interface ].ipv6[0].address }}"
+    nodeip_ipv4: "{{ ansible_facts[ interface ].ipv4.address }}"
+    nodeip_ipv6: "{{ ansible_facts[ interface ].ipv6[0].address if ansible_facts[ interface ].ipv6 is defined }}"
 
 - name: Run handlers to reload configurations
   meta: flush_handlers
