@@ -17,12 +17,15 @@
 #- name: Disable swap
 #  command: swapoff -a
 
-#- name: Install iptables
-#  package:
-#      name:
-#          #- containerd
-#          - iptables
-#      state: latest
+- name: Install required packages
+  package:
+      name:
+          #- containerd
+          #- iptables
+          # For Longhorn:
+          - nfs-common
+          - open-iscsi
+      state: latest
 
 -  import_tasks: ./prerequisites/containerd.yml
 
