@@ -9,3 +9,13 @@ kubelet-arg: "--node-ip=0.0.0.0"
 {% else %}
 node-ip: {{ nodeip_ipv4 }}
 {% endif %}
+
+## Label
+# Region & DC
+node-label:
+{% if region is defined %}
+  - topology.kubernetes.io/region={{ region }}
+{% endif %}
+{% if zone is defined %}
+  - topology.kubernetes.io/zone={{ zone }}
+{% endif %}

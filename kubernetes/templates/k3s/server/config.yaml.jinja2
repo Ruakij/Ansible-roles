@@ -38,3 +38,14 @@ flannel-backend: none
 {% if kubernetes.ingress_controller != "traefik-ingress" %}
 disable: traefik
 {% endif %}
+
+## Label
+# Region & DC
+node-label:
+{% if region is defined %}
+  - topology.kubernetes.io/region={{ region }}
+{% endif %}
+{% if zone is defined %}
+  - topology.kubernetes.io/zone={{ zone }}
+{% endif %}
+
