@@ -1,7 +1,12 @@
 - name: Install K3s agent
-  command: /root/k3s_install.sh {{ type }} 
+  command: /root/k3s_install.sh {{ type }}
   register: command
   changed_when: "'No change detected' in command.stdout"
   until: "command is not failed"
   retries: 2
   delay: 10
+
+- name: Restart when config changed, but install already done
+  service: k3s
+  status: restarted
+  when: "inventory_hostname != groups['kubernetes'][0] && !command.changed && config.changed"
