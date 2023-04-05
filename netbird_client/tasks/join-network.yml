@@ -1,0 +1,16 @@
+- name: Join netbird-network
+  when: "netbird_client.join_network.setup_key is defined"
+  command: "netbird up --management-url {{ netbird_client.join_network.management_url }} --setup-key {{ netbird_client.join_network.setup_key }}"
+  failed_when: command.rc != 0
+  changed_when: "'Connected' in command.stdout"
+  register: command
+
+- name: Wait for netbird-interface to exist
+  wait_for:
+    path: "/sys/class/net/wt0"
+    state: present
+  when: command.changed
+
+- name: Gather facts to get changes
+  ansible.builtin.gather_facts:
+  when: command.changed
