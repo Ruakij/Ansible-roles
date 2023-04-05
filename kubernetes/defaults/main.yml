@@ -23,3 +23,11 @@ kubernetes:
 
   # One of [traefik-ingress]
   ingress_controller: traefik-ingress
+
+  config_extra:
+    # etcd-tuning
+    #  heartbeat: 0.5-1.5x of rtt
+    #  election:  10x- of heartbeat
+    etcd-arg:
+      heartbeat-interval: 500
+      election-timeout: 5000

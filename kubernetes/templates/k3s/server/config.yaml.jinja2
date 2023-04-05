@@ -49,3 +49,4 @@ node-label:
   - topology.kubernetes.io/zone={{ zone }}
 {% endif %}
 
+{{ kubernetes.config_extra | to_yaml }}
