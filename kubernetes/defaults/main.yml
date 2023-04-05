@@ -18,8 +18,16 @@ kubernetes:
 
   token: <shared token for nodes to join>
 
-  # One of [flannel, calico]
-  network_plugin: calico
+  network:
+    # One of [flannel, calico]
+    plugin: calico
+
+    # Helper for networking
+    helper:
+      # https://github.com/Ruakij/RoutingTableToWg
+      #  Translates received-routes from e.g. BGP to wireguard-allowedips
+      #  Helpful, when nodeIp_interface is a wireguard-interface
+      routingtabletowg: false
 
   # One of [traefik-ingress]
   ingress_controller: traefik-ingress
