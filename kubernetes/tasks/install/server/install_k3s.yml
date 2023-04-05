@@ -1,13 +1,14 @@
 - name: Install K3s-server for 1st-node
-  command: /root/k3s_install.sh {{ type }} 
+  command: /root/k3s_install.sh {{ type }}
   when: "inventory_hostname == groups['kubernetes'][0]"
   register: command
   changed_when: "'No change detected' in command.stdout"
 
 - name: Restart when config changed, but install already done
-  service: k3s
-  status: restarted
-  when: "inventory_hostname == groups['kubernetes'][0] && !command.changed && config.changed"
+  service:
+    name: k3s
+    status: restarted
+  when: "inventory_hostname == groups['kubernetes'][0] and not command.changed and config.changed"
 
 - name: Waiting for K3s-server to accept connections
   ansible.builtin.wait_for:
@@ -26,9 +27,10 @@
   delay: 10
 
 - name: Restart when config changed, but install already done
-  service: k3s
-  status: restarted
-  when: "inventory_hostname != groups['kubernetes'][0] && !command.changed && config.changed"
+  service:
+    name: k3s
+    status: restarted
+  when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"
 
 - name: Waiting for K3s-server to accept connections on other nodes
   ansible.builtin.wait_for:
