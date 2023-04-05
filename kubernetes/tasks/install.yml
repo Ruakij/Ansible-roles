@@ -8,6 +8,7 @@
   ansible.builtin.template:
     src: k3s/{{ type }}/config.yaml.jinja2
     dest: /etc/rancher/k3s/config.yaml
+  register: config
 
 - name: Download install-script
   get_url:
