@@ -2,16 +2,40 @@
 kubernetes:
   ipPool:
     ipv4:
+      # Minimum: /24
       cluster_cidr: 10.42.0.0/16
       service_cidr: 10.43.0.0/16
     ipv6:
+      # Minimum: /120
       cluster_cidr: fd42::/56
       service_cidr: fd43::/112
 
-    # Replace - with _
+    # Interface to grab node-IPv4/v6 from
     nodeIp_interface: <interface to grab nodeIp from>
 
   control_plane:
     dns_name: <control-plane dns-reachable-name>
 
   token: <shared token for nodes to join>
+
+  network:
+    # One of [flannel, calico]
+    plugin: calico
+
+    # Helper for networking
+    helper:
+      # https://github.com/Ruakij/RoutingTableToWg
+      #  Translates received-routes from e.g. BGP to wireguard-allowedips
+      #  Helpful, when nodeIp_interface is a wireguard-interface
+      routingtabletowg: false
+
+  # One of [traefik-ingress]
+  ingress_controller: traefik-ingress
+
+  config_extra:
+    # etcd-tuning
+    #  heartbeat: 0.5-1.5x of rtt
+    #  election:  10x- of heartbeat
+    etcd-arg:
+      heartbeat-interval: 500
+      election-timeout: 5000

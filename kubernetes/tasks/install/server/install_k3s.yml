@@ -1,8 +1,14 @@
 - name: Install K3s-server for 1st-node
-  command: /root/k3s_install.sh {{ type }} 
+  command: /root/k3s_install.sh {{ type }}
   when: "inventory_hostname == groups['kubernetes'][0]"
   register: command
   changed_when: "'No change detected' in command.stdout"
+
+- name: Restart when config changed, but install already done
+  service:
+    name: k3s
+    status: restarted
+  when: "inventory_hostname == groups['kubernetes'][0] and not command.changed and config.changed"
 
 - name: Waiting for K3s-server to accept connections
   ansible.builtin.wait_for:
@@ -20,6 +26,12 @@
   retries: 2
   delay: 10
 
+- name: Restart when config changed, but install already done
+  service:
+    name: k3s
+    status: restarted
+  when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"
+
 - name: Waiting for K3s-server to accept connections on other nodes
   ansible.builtin.wait_for:
     host: "{{ inventory_hostname }}"
@@ -34,3 +46,10 @@
 #    block: |
 #      export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 #    create: true
+
+- name: Deploy calico
+  import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_calico.yml
+  when: "kubernetes.network.plugin == 'calico'"
+
+- name: Deploy network-helpers
+  import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_network_helper.yml

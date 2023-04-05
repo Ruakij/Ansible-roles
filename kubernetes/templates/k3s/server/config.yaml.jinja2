@@ -1,23 +1,52 @@
 ## Base ##
 {% if inventory_hostname == groups['kubernetes'][0] %}
+# Initialize with internal etcd
 cluster-init: true
 {% else %}
-server: https://{{ groups['kubernetes'][0] }}:6443
+server: https://{{ hostvars[groups['kubernetes'][0]]['nodeip_ipv4'] }}:6443
 {% endif %}
 
-token: {{ kubernetes.token }}
+token: '{{ kubernetes.token }}'
 tls-san:
   - {{ kubernetes.control_plane.dns_name }}
 
 # Networking
+{% if nodeip_ipv6 != "" and kubernetes.ipPool.ipv6 is defined %}
 node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
 cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}
-service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}   
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }},{{ kubernetes.ipPool.ipv6.service_cidr }}  
+
+# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
+kubelet-arg: "--node-ip=0.0.0.0"
+{% else %}
+node-ip: {{ nodeip_ipv4 }}
+cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }}
+service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }}
+{% endif %}
 
 egress-selector-mode: disabled
 
 # Network-plugin
+{% if kubernetes.network_plugin == "flannel" %}
 flannel-backend: vxlan
+{% else %}
+disable-network-policy: true
+flannel-backend: none
+{% endif %}
 
-# FIXME: Workaround for bug in Kubernetes 1.24/1.25 ignoring node IPv6 addresses
-kubelet-arg: "--node-ip=0.0.0.0"
+# Ingress-plugin
+{% if kubernetes.ingress_controller != "traefik-ingress" %}
+disable: traefik
+{% endif %}
+
+## Label
+# Region & DC
+node-label:
+{% if region is defined %}
+  - topology.kubernetes.io/region={{ region }}
+{% endif %}
+{% if zone is defined %}
+  - topology.kubernetes.io/zone={{ zone }}
+{% endif %}
+
+{{ kubernetes.config_extra | to_yaml }}

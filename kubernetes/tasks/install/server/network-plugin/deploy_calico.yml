@@ -1,0 +1,17 @@
+- name: Deploy calico operator
+  command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+  register: command
+  changed_when: "'created' in command.stdout"
+  run_once: true
+
+- name: Deploy calico ressource template
+  ansible.builtin.template:
+    src: ./k3s/server/network-plugin/calico/custom-ressource.yml.jinja2
+    dest: /root/calico-ressource.yml
+  run_once: true
+
+- name: Deploy calico ressource
+  command: kubectl apply -f /root/calico-ressource.yml
+  register: command
+  changed_when: "'created' in command.stdout"
+  run_once: true
