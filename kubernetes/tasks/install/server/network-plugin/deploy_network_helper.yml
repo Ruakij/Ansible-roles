@@ -4,3 +4,4 @@
     dest: /var/lib/rancher/k3s/server/manifests/routingtabletowg.yml
     mode: u=rw,g=r,o=r
   run_once: true
+  when: "kubernetes.network.helper.routingtabletowg"

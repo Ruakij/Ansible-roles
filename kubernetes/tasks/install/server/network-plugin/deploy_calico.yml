@@ -15,6 +15,3 @@
   register: command
   changed_when: "'created' in command.stdout"
   run_once: true
-
-- name: Deploy calico-helpers
-  import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_calico_helper.yml
