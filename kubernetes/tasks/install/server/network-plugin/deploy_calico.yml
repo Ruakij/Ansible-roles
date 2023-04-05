@@ -1,5 +1,5 @@
 - name: Deploy calico operator
-  command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
   register: command
   changed_when: "'created' in command.stdout"
   run_once: true
