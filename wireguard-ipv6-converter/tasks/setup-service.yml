@@ -9,4 +9,4 @@
     name: wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}
     state: "{{ 'restarted' if serviceFile.changed else 'started' }}"
     enabled: true
-
+    daemon-reload: true
