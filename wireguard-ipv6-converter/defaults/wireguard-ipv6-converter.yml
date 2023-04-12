@@ -1,0 +1,12 @@
+wireguard_ipv6_converter:
+  version: latest
+
+  # see https://github.com/Ruakij/wg-ipv6-converter#31-environment
+  setup:
+    interface: wg0
+    #ipv6_format: fc12::%02x%02x:%02x%02x/%d
+    #filter_prefix: 100.100
+    #recheck_interval: 60s
+
+  service:
+    #bindTo: netbird.service

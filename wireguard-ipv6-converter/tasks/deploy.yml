@@ -1,0 +1,11 @@
+- name: Get architecture
+  set_fact:
+    arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+    versionUri: "{% if wireguard_ipv6_converter.version == 'latest' %}latest/download{% else %}download/{{ wireguard_ipv6_converter.version }}{% endif %}"
+
+- name: Download binary
+  get_url:
+    url: https://github.com/Ruakij/wg-ipv6-converter/releases/{{ versionUri }}/wg-ipv6-converter_{{ arch }}
+    dest: /usr/local/bin/wg-ipv6-converter
+    mode: "744"
+  register: deployDownload
