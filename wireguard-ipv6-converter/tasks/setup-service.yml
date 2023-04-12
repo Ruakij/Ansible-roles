@@ -1,0 +1,12 @@
+- name: Deploy service
+  ansible.builtin.template:
+    src: wg-ipv6-conv.service.jinja2
+    dest: /etc/systemd/system/wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}.service
+  register: service-file
+
+- name: Enable service
+  ansible.builtin.service:
+    name: wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}
+    state: '{{ 'restarted' if service-file.changed else 'started' }}'
+    enabled: true
+

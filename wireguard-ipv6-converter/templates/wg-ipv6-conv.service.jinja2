@@ -1,0 +1,23 @@
+[Unit]
+Description=WireGuard IPv6 converter for {{ wireguard_ipv6_converter.setup.interface }}
+{% if wireguard_ipv6_converter.service.bindTo is defined %}
+BindsTo={{ wireguard_ipv6_converter.service.bindTo }}
+After={{ wireguard_ipv6_converter.service.bindTo }}
+{% endif %}
+
+[Service]
+Type=simple
+{% if wireguard_ipv6_converter.service.bindTo is defined %}
+ExecStartPre=/bin/sleep 10
+{% endif %}
+ExecStart=/usr/local/bin/wg-ipv6-converter
+Restart=always
+RestartSec=30
+
+Environment="INTERFACE={{ wireguard_ipv6_converter.setup.interface }}"
+Environment="IPV6_FORMAT={{ wireguard_ipv6_converter.setup.ipv6_format }}"
+Environment="FILTER_PREFIX={{ wireguard_ipv6_converter.setup.filter_prefix }}"
+Environment="RECHECK_INTERVAL={{ wireguard_ipv6_converter.setup.recheck_interval }}"
+
+[Install]
+WantedBy=multi-user.target
