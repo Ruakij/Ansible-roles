@@ -15,9 +15,15 @@ Restart=always
 RestartSec=30
 
 Environment="INTERFACE={{ wireguard_ipv6_converter.setup.interface }}"
+{% if wireguard_ipv6_converter.setup.ipv6_format is defined %}
 Environment="IPV6_FORMAT={{ wireguard_ipv6_converter.setup.ipv6_format }}"
+{% endif %}
+{% if wireguard_ipv6_converter.setup.filter_prefix is defined %}
 Environment="FILTER_PREFIX={{ wireguard_ipv6_converter.setup.filter_prefix }}"
+{% endif %}
+{% if wireguard_ipv6_converter.setup.recheck_interval is defined %}
 Environment="RECHECK_INTERVAL={{ wireguard_ipv6_converter.setup.recheck_interval }}"
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target
