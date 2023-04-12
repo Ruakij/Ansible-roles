@@ -5,5 +5,5 @@
 - name: Download binary
   get_url:
     url: https://github.com/Ruakij/wg-ipv6-converter/releases/download/{{ wireguard_ipv6_converter.version }}/wg-ipv6-converter_{{ arch }}
-    dest: /usr/bin/local/wg-ipv6-converter
+    dest: /usr/local/bin/wg-ipv6-converter
     mode: "744"
