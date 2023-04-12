@@ -4,7 +4,7 @@
     dest: /etc/systemd/system/wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}.service
   register: serviceFile
 
-- name: Enable service
+- name: Enable & Start service
   ansible.builtin.service:
     name: wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}
     state: "{{ 'restarted' if serviceFile.changed else 'started' }}"
