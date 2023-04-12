@@ -27,7 +27,7 @@ service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }}
 egress-selector-mode: disabled
 
 # Network-plugin
-{% if kubernetes.network_plugin == "flannel" %}
+{% if kubernetes.network.plugin == "flannel" %}
 flannel-backend: vxlan
 {% else %}
 disable-network-policy: true
