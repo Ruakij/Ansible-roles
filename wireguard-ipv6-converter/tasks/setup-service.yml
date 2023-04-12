@@ -14,4 +14,14 @@
   ansible.builtin.service:
     name: wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}
     state: "{{ 'restarted' if deployDownload.changed or serviceFile.changed else 'started' }}"
+  register: service
   when: "wireguard_ipv6_converter.setup.interface in ansible_interfaces"
+
+- name: Pause for 5s to wait for program to have run
+  ansible.builtin.pause:
+    seconds: 5
+  when: "service.changed"
+
+- name: Gather facts to get changes
+  ansible.builtin.gather_facts:
+  when: "service.changed"
