@@ -8,3 +8,4 @@
     url: https://github.com/Ruakij/wg-ipv6-converter/releases/{{ versionUri }}/wg-ipv6-converter_{{ arch }}
     dest: /usr/local/bin/wg-ipv6-converter
     mode: "744"
+  register: deployDownload
