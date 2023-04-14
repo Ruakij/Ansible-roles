@@ -6,8 +6,7 @@
   retries: 2
   delay: 10
 
-- name: Restart when config changed, but install already done
+- name: Make sure service is started / restarted on config change
   service:
     name: k3s-agent
-    state: restarted
-  when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"
+    state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"

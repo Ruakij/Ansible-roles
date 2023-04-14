@@ -4,11 +4,11 @@
   register: command
   changed_when: "'No change detected' not in command.stdout"
 
-- name: Restart when config changed, but install already done
+- name: Make sure service is started / restarted on config change
   service:
     name: k3s
-    state: restarted
-  when: "inventory_hostname == groups['kubernetes'][0] and not command.changed and config.changed"
+    state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
+  when: "inventory_hostname == groups['kubernetes'][0]"
 
 - name: Waiting for K3s-server to accept connections
   ansible.builtin.wait_for:
@@ -26,11 +26,11 @@
   retries: 2
   delay: 10
 
-- name: Restart when config changed, but install already done
+- name: Make sure service is started / restarted on config change
   service:
     name: k3s
-    state: restarted
-  when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"
+    state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
+  when: "inventory_hostname != groups['kubernetes'][0]"
 
 - name: Waiting for K3s-server to accept connections on other nodes
   ansible.builtin.wait_for:
