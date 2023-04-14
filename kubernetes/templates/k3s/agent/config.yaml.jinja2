@@ -1,4 +1,4 @@
-server: https://{{ kubernetes.control_plane.dns_name }}:6443
+server: https://{{ hostvars[groups['kubernetes'][0]]['nodeip_ipv4'] }}:6443
 token: '{{ kubernetes.token }}'
 
 {% if nodeip_ipv6 != "" and kubernetes.ipPool.ipv6 is defined %}
