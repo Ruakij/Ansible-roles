@@ -3,6 +3,8 @@
   register: command
   changed_when: "'created' in command.stdout"
   run_once: true
+  failed_when:
+  - "command.rc == 1 and 'AlreadyExists' not in command.stderr"
 
 - name: Deploy calico ressource template
   ansible.builtin.template:
