@@ -8,6 +8,6 @@
 
 - name: Restart when config changed, but install already done
   service:
-    name: k3s
-    status: restarted
+    name: k3s-agent
+    state: restarted
   when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"

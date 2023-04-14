@@ -7,7 +7,7 @@
 - name: Restart when config changed, but install already done
   service:
     name: k3s
-    status: restarted
+    state: restarted
   when: "inventory_hostname == groups['kubernetes'][0] and not command.changed and config.changed"
 
 - name: Waiting for K3s-server to accept connections
@@ -29,7 +29,7 @@
 - name: Restart when config changed, but install already done
   service:
     name: k3s
-    status: restarted
+    state: restarted
   when: "inventory_hostname != groups['kubernetes'][0] and not command.changed and config.changed"
 
 - name: Waiting for K3s-server to accept connections on other nodes
