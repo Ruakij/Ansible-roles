@@ -1,0 +1,13 @@
+# Defaults if missing
+- name: Set defaults if missing
+  set_fact:
+    nftables:
+      rules:
+        files: "{{ nftables.rules.files | default({}) | combine({}) }}"
+        raw: "{{ nftables.rules.raw | default({}) | combine({}) }}"
+    combined_rules: "{{ nftables.rules.raw | combine(nftables.rules.files, recursive=true) }}"
+
+#- name: Check items for consistency
+#  assert:
+#    that: "{{ nftables.rules.files.values() | length }} + {{ nftables.rules.raw.values() | length }} == {{ combined_rules.values() | length }}"
+#    fail_msg: "files and raw rules share the same identifier"

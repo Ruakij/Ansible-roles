@@ -1,0 +1,21 @@
+- name: Handle removed group files
+  block:
+  - find:
+      paths: /etc/nftables/ansible-managed/
+      file_type: 'any'
+      excludes: '{% for item in combined_rules %}{{ item }},{{ item }}.nft,{% endfor %}'
+      depth: 1
+    register: removeFiles
+
+  - file:
+      path: "{{ fileItem.path }}"
+      state: absent
+    loop: "{{ removeFiles.files }}"
+    loop_control:
+      label: "{{ fileItem.path }}"
+      loop_var: fileItem
+
+- name: Handle removed included files per group
+  include_tasks: ./remove-per-group.yml
+  with_items:
+  - "{{ combined_rules | list }}"
