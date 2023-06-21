@@ -12,7 +12,7 @@
 
 - name: Waiting for K3s-server to accept connections
   ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
+    host: "127.0.0.1"
     port: 6443
     state: started
   when: "inventory_hostname == groups['kubernetes'][0]"
@@ -34,7 +34,7 @@
 
 - name: Waiting for K3s-server to accept connections on other nodes
   ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
+    host: "127.0.0.1"
     port: 6443
     state: started
   when: "inventory_hostname != groups['kubernetes'][0]"
