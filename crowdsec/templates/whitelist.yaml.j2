@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+name: local/host-whitelist
+description: Internal ranges and admin addresses
+whitelist:
+  reason: internal or admin source
+  cidr:
+{% for cidr in crowdsec.whitelist | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique %}
+    - "{{ cidr }}"
+{% endfor %}

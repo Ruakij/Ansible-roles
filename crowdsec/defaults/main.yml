@@ -1,0 +1,19 @@
+---
+crowdsec:
+  # Central LAPI; hosts run only the agent and the bouncer.
+  lapi_url: ""
+  registration_token: ""
+  bouncer_api_key: ""
+  # name -> hub collection, merged across group_vars/host_vars (null drops one).
+  collections: {}
+  # name -> hub scenario outside the collections.
+  scenarios: {}
+  # path below /etc/crowdsec -> content, for local parsers and scenarios.
+  local_files: {}
+  # name -> CIDR (single addresses as /32 or /128) never acted upon by this agent.
+  whitelist: {}
+  # name -> acquisition datasource, written to /etc/crowdsec/acquis.d/<name>.yaml.
+  acquisition: {}
+  # packagecloud has no trixie suite yet; the bookworm build is static Go.
+  apt_suite_map:
+    trixie: bookworm

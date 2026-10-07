@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+api_url: {{ crowdsec.lapi_url }}/
+api_key: {{ crowdsec.bouncer_api_key }}
+mode: nftables
+# forward covers Docker-published ports and Proxmox guests.
+nftables_hooks:
+  - input
+  - forward

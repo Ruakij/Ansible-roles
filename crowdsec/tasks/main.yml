@@ -1,0 +1,189 @@
+---
+- name: Require LAPI settings
+  ansible.builtin.assert:
+    that:
+      - crowdsec.lapi_url | length > 0
+      - crowdsec.registration_token | length > 0
+      - crowdsec.bouncer_api_key | length > 0
+    fail_msg: crowdsec.lapi_url, crowdsec.registration_token and crowdsec.bouncer_api_key must be set
+
+- name: Create /etc/apt/keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add the CrowdSec apt key
+  ansible.builtin.get_url:
+    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    dest: /etc/apt/keyrings/crowdsec.asc
+    mode: "0644"
+
+- name: Add the CrowdSec apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/crowdsec.list
+    mode: "0644"
+    content: >
+      deb [signed-by=/etc/apt/keyrings/crowdsec.asc]
+      https://packagecloud.io/crowdsec/crowdsec/{{ ansible_distribution | lower }}/
+      {{ crowdsec.apt_suite_map[ansible_distribution_release] | default(ansible_distribution_release) }} main
+  register: crowdsec_repo
+
+# The postinst asks these; without them it registers a local machine for a
+# local LAPI and enrols in the central CAPI.
+- name: Preseed the package for a remote LAPI
+  ansible.builtin.debconf:
+    name: crowdsec
+    question: "{{ item.question }}"
+    vtype: "{{ item.vtype }}"
+    value: "{{ item.value }}"
+  loop:
+    - { question: crowdsec/lapi, vtype: boolean, value: "false" }
+    - { question: crowdsec/capi, vtype: boolean, value: "false" }
+    - { question: crowdsec/lapi_host, vtype: string, value: "{{ crowdsec.lapi_url | urlsplit('netloc') }}" }
+
+- name: Create the CrowdSec config directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /etc/crowdsec
+    - /etc/crowdsec/acquis.d
+    - /etc/crowdsec/bouncers
+    - /etc/crowdsec/parsers/s02-enrich
+    - /etc/systemd/system/crowdsec.service.d
+    - /etc/systemd/system/crowdsec-firewall-bouncer.service.d
+    - /etc/systemd/system/nftables.service.d
+
+- name: Disable the local API server
+  ansible.builtin.copy:
+    dest: /etc/crowdsec/config.yaml.local
+    mode: "0644"
+    content: |
+      api:
+        server:
+          enable: false
+  notify: Restart crowdsec
+
+# The postinst starts the agent before it is registered; an empty credentials
+# file then makes the start a no-op instead of a failed package install.
+- name: Start the agent only once registered
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/crowdsec.service.d/registered.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      ConditionFileNotEmpty=/etc/crowdsec/local_api_credentials.yaml
+  register: crowdsec_dropin
+
+# Start, reload and stop of nftables.service flush the whole ruleset with the
+# bouncer tables; a restart recreates them with all decisions. Ordering after
+# nftables.service makes the queued restarts wait for its job to finish.
+- name: Restart the bouncer after nftables.service flushes the ruleset
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    mode: "0644"
+    content: "{{ item.content }}"
+  loop:
+    - dest: /etc/systemd/system/nftables.service.d/crowdsec-firewall-bouncer.conf
+      content: |
+        [Service]
+        ExecStartPost=-/bin/systemctl --no-block try-restart crowdsec-firewall-bouncer.service
+        ExecReload=-/bin/systemctl --no-block try-restart crowdsec-firewall-bouncer.service
+        ExecStopPost=-/bin/systemctl --no-block try-restart crowdsec-firewall-bouncer.service
+    - dest: /etc/systemd/system/crowdsec-firewall-bouncer.service.d/nftables.conf
+      content: |
+        [Unit]
+        After=nftables.service
+  loop_control:
+    label: "{{ item.dest }}"
+  register: crowdsec_bouncer_dropins
+
+# Present before the package install, so the postinst finds an API key and
+# does not try to create one on a local LAPI.
+- name: Configure the firewall bouncer
+  ansible.builtin.template:
+    src: crowdsec-firewall-bouncer.yaml.local.j2
+    dest: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml.local
+    mode: "0600"
+  notify: Restart crowdsec-firewall-bouncer
+
+- name: Install the parser whitelist
+  ansible.builtin.template:
+    src: whitelist.yaml.j2
+    dest: /etc/crowdsec/parsers/s02-enrich/host-whitelist.yaml
+    mode: "0644"
+  notify: Restart crowdsec
+
+- name: Install the acquisition files
+  ansible.builtin.copy:
+    dest: "/etc/crowdsec/acquis.d/{{ item.key }}.yaml"
+    mode: "0644"
+    content: "{{ item.value | to_nice_yaml }}"
+  loop: "{{ crowdsec.acquisition | dict2items | rejectattr('value', 'none') }}"
+  notify: Restart crowdsec
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: crowdsec_dropin is changed or crowdsec_bouncer_dropins is changed
+
+- name: Install the agent and the nftables bouncer
+  ansible.builtin.apt:
+    name: [crowdsec, crowdsec-firewall-bouncer-nftables]
+    state: present
+    update_cache: "{{ crowdsec_repo is changed }}"
+  # The postinst otherwise runs service detection, which needs credentials that only the registration below creates
+  environment:
+    CROWDSEC_SETUP_UNATTENDED_DISABLE: "1"
+
+- name: Read the agent credentials
+  ansible.builtin.command: grep -q '^login:' /etc/crowdsec/local_api_credentials.yaml
+  register: crowdsec_registered
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Register the agent at the LAPI
+  ansible.builtin.command: >-
+    cscli lapi register --url {{ crowdsec.lapi_url }}
+    --token {{ crowdsec.registration_token }} --machine {{ ansible_hostname }}
+  when: crowdsec_registered.rc != 0
+  no_log: true
+  notify: Restart crowdsec
+
+- name: List the installed hub items
+  ansible.builtin.command: cscli hub list -o json
+  register: crowdsec_hub_json
+  changed_when: false
+  # cscli is missing in check mode before the first install.
+  failed_when: crowdsec_hub_json.rc != 0 and not ansible_check_mode
+  check_mode: false
+
+- name: Install the hub items
+  ansible.builtin.command: "cscli {{ item }} install {{ crowdsec_missing | join(' ') }}"
+  vars:
+    crowdsec_wanted: "{{ crowdsec[item] | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique }}"
+    crowdsec_present: "{{ (crowdsec_hub_json.stdout | default('{}', true) | from_json)[item] | default([], true) | map(attribute='name') }}"
+    crowdsec_missing: "{{ crowdsec_wanted | difference(crowdsec_present) }}"
+  loop: [collections, scenarios]
+  when: crowdsec_missing | length > 0
+  notify: Restart crowdsec
+
+- name: Install the local parsers and scenarios
+  ansible.builtin.copy:
+    dest: "/etc/crowdsec/{{ item.key }}"
+    mode: "0644"
+    content: "{{ item.value }}"
+  loop: "{{ crowdsec.local_files | dict2items | rejectattr('value', 'none') }}"
+  loop_control:
+    label: "{{ item.key }}"
+  notify: Restart crowdsec
+
+- name: Enable the agent and the bouncer
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [crowdsec.service, crowdsec-firewall-bouncer.service]
