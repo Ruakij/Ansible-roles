@@ -16,11 +16,15 @@ set {{ name }} {
 {% set internal_ifaces = firewall.internal_ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
 {% set guest_ifaces = firewall.guest_ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
 {% set guest_match = 'iifname { "' ~ (guest_ifaces | join('", "')) ~ '" }' %}
+{% set dnat = firewall.dnat | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | list %}
+{% set masquerade = firewall.masquerade | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
 
 # Declare-then-delete makes every load one atomic transaction that replaces
-# only this table; Cilium, Docker, NetBird and CrowdSec tables stay untouched.
+# only these tables; Cilium, Docker, NetBird and CrowdSec tables stay untouched.
 table inet host {}
 delete table inet host
+table ip host_nat {}
+delete table ip host_nat
 
 {% if firewall.geo_countries %}
 include "/etc/nftables.d/host-geo.nft"
@@ -116,3 +120,23 @@ table inet host {
 {% endif %}
 	}
 }
+{% if dnat or masquerade %}
+
+table ip host_nat {
+	chain prerouting {
+		type nat hook prerouting priority dstnat; policy accept;
+{% for fwd in dnat %}
+{% for proto in ['tcp', 'udp'] if list(fwd[proto]) %}
+		ip daddr {{ fwd.daddr }} {{ proto }} dport { {{ list(fwd[proto]) }} } dnat to {{ fwd.to }}
+{% endfor %}
+{% endfor %}
+	}
+
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+{% for match in masquerade %}
+		{{ match }} masquerade
+{% endfor %}
+	}
+}
+{% endif %}

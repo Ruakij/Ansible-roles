@@ -26,6 +26,11 @@ firewall:
     ifaces: {}
     v4: {}
     v6: {}
+  # IPv4 port forwards: name -> {daddr, to, tcp: ports, udp: ports}, ports as in
+  # the maps above. Forwarded traffic passes the forward hook, not input.
+  dnat: {}
+  # IPv4 source NAT: name -> nft match, e.g. 'oifname "vmbr0"'.
+  masquerade: {}
   ssh_rate_limit: "10/minute burst 5 packets"
   # EU-27 plus CH, NO, GB, IS, LI (ipdeny country codes). Empty leaves the geo
   # ports to the admin set; a load peaks at about 60 MB of kernel memory, too much for a 1 GB host.

@@ -1,5 +1,5 @@
 [Unit]
-Description=Host input firewall (nftables table inet host)
+Description=Host input firewall and NAT (nftables tables inet host and ip host_nat)
 # Same early-boot placement as nftables.service. Its "flush ruleset" on start,
 # reload and stop would wipe this table, so load after it and follow all three.
 DefaultDependencies=no
