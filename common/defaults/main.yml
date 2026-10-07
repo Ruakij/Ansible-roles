@@ -1,1 +1,8 @@
-ipv6_stable_secret: 1111:2222:3333:4444:5555:6666:7777:8888
+ipv6_stable_secret_seed: "@JW7rQ^P3*f^KRkX3744DZQJb3DfMgZJJMtGc!Jmy!ECBqb^QzAMYLHD8dLvf8m%2bRSRFhgY#SXzAgnxWTvHv#ti6b5PngR^k2gHbQW*%dJ9sdeKM$H77Gymh&xamNN"
+
+# Times of the heavy disk jobs, for hosts on a shared HDD pool that keep them out of the backup window.
+disk_maintenance:
+  # systemd OnCalendar for fstrim.timer; unset keeps the distribution schedule.
+  fstrim_on_calendar:
+  # Cron "minute hour" of the monthly ZFS trim and scrub from zfsutils-linux; unset keeps 00:24.
+  zfs_cron_time:

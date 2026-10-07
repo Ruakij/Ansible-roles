@@ -1,0 +1,35 @@
+- name: Pin the fstrim timer
+  when: disk_maintenance.fstrim_on_calendar | default(none) is not none
+  block:
+    - name: Create the fstrim timer drop-in directory
+      file:
+        path: /etc/systemd/system/fstrim.timer.d
+        state: directory
+
+    - name: Set the fstrim timer schedule
+      copy:
+        dest: /etc/systemd/system/fstrim.timer.d/schedule.conf
+        content: |
+          [Timer]
+          OnCalendar=
+          OnCalendar={{ disk_maintenance.fstrim_on_calendar }}
+          RandomizedDelaySec=0
+          # A catch-up run after a boot or a timezone change would land at any time.
+          Persistent=false
+      register: fstrim_timer
+
+    - name: Restart the fstrim timer
+      when: fstrim_timer.changed
+      systemd:
+        name: fstrim.timer
+        daemon_reload: yes
+        state: restarted
+
+- name: Schedule the monthly ZFS trim and scrub
+  when: disk_maintenance.zfs_cron_time | default(none) is not none
+  lineinfile:
+    path: /etc/cron.d/zfsutils-linux
+    regexp: '^\S+ \S+ (\S+ \* \* root .*/usr/lib/zfs-linux/{{ item }};.*)$'
+    line: '{{ disk_maintenance.zfs_cron_time }} \1'
+    backrefs: yes
+  loop: [trim, scrub]
