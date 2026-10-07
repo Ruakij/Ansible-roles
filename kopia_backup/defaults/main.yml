@@ -1,0 +1,28 @@
+---
+kopia_backup:
+  # S3 repository; it is created, and its policies and maintenance are set, outside this role.
+  endpoint: tier1.backups.ruekov.eu
+  bucket: ""
+  access_key: ""
+  secret_key: ""
+  password: ""
+  # Snapshot owner is root@<hostname>; several hosts can share one repository.
+  hostname: "{{ inventory_hostname_short }}"
+  # Kopia defaults when unset.
+  content_cache_size_mb:
+  metadata_cache_size_mb:
+  # Paths to snapshot; missing ones are skipped at run time.
+  sources: []
+  # source path -> ignore rules, replacing the policy rules on every run (null drops one).
+  ignore: {}
+  # Database dumps written to /var/backups/dumps before the snapshot, which then includes that directory.
+  # Each item: file, container, command (run with sh -c inside the container, output is the dump).
+  dumps: []
+  # Snapshot the newest k3s etcd snapshot, staged in /var/backups/etcd.
+  etcd_snapshot: false
+  on_calendar: "*-*-* 03:30"
+  randomized_delay: ""
+  # Extra units the service starts after, e.g. docker.service for dumps.
+  after: []
+  # Nice=10 and idle IO scheduling.
+  idle_priority: true

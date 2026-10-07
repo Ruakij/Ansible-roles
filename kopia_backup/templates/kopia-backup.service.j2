@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Kopia backup to {{ kopia_backup.endpoint }}
+After={{ (['network-online.target'] + kopia_backup.after) | join(' ') }}
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME=/root
+{% if kopia_backup.idle_priority %}
+Nice=10
+IOSchedulingClass=idle
+{% endif %}
+ExecStart=/usr/local/sbin/kopia-backup

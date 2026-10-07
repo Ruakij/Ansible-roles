@@ -1,0 +1,54 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Daily Kopia backup of {{ kopia_backup.hostname }} into the bucket {{ kopia_backup.bucket }} on {{ kopia_backup.endpoint }}.
+set -uo pipefail
+export KOPIA_CHECK_FOR_UPDATES=false
+failed=0
+sources=()
+{% if kopia_backup.etcd_snapshot %}
+
+# Only the latest etcd snapshot; the live etcd dir is not consistent on disk and older snapshots only add churn
+etcd=/var/backups/etcd
+latest=$(ls -t /var/lib/rancher/k3s/server/db/snapshots/etcd-snapshot-* 2>/dev/null | head -1)
+if [ -n "$latest" ]; then
+  install -d -m700 "$etcd"
+  rm -f "$etcd/etcd-snapshot"
+  ln "$latest" "$etcd/etcd-snapshot" 2>/dev/null || cp -p "$latest" "$etcd/etcd-snapshot" || failed=1
+fi
+{% endif %}
+{% if kopia_backup.dumps %}
+
+dumps=/var/backups/dumps
+install -d -m700 "$dumps"
+dump() { # file, container, command run inside the container
+  if docker exec "$2" sh -c "$3" > "$dumps/$1.tmp"; then
+    mv "$dumps/$1.tmp" "$dumps/$1"
+  else
+    echo "dump of $1 failed" >&2; rm -f "$dumps/$1.tmp"; failed=1
+  fi
+}
+{% for d in kopia_backup.dumps %}
+dump {{ d.file | quote }} {{ d.container | quote }} {{ d.command | quote }}
+{% endfor %}
+{% endif %}
+{% set ignores = kopia_backup.ignore | dict2items | rejectattr('value', 'none') | list %}
+{% if ignores %}
+
+# Ignore rules of a source, replaced as a whole (--clear-ignore runs after --add-ignore within one call).
+# Kopia sorts the rules, so negations (!) cannot be relied on to come after the rule they override.
+ignore() {
+  local path=$1; shift
+  kopia policy set "$path" --clear-ignore >/dev/null 2>&1 &&
+    kopia policy set "$path" "${@/#/--add-ignore=}" >/dev/null 2>&1 ||
+    { echo "setting the ignore rules of $path failed" >&2; failed=1; }
+}
+{% for i in ignores %}
+ignore {{ i.key | quote }} {{ i.value | map('quote') | join(' ') }}
+{% endfor %}
+{% endif %}
+
+for p in {{ kopia_backup.sources | map('quote') | join(' ') }}{{ ' "$etcd"' if kopia_backup.etcd_snapshot }}{{ ' "$dumps"' if kopia_backup.dumps }}; do
+  [ -d "$p" ] && sources+=("$p")
+done
+kopia snapshot create "${sources[@]}" || failed=1
+exit $failed

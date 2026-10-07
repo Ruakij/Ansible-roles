@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Daily Kopia backup to {{ kopia_backup.endpoint }}
+
+[Timer]
+OnCalendar={{ kopia_backup.on_calendar }}
+{% if kopia_backup.randomized_delay %}
+RandomizedDelaySec={{ kopia_backup.randomized_delay }}
+{% endif %}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

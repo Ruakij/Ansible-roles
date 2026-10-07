@@ -1,0 +1,90 @@
+---
+- name: Require the repository settings
+  ansible.builtin.assert:
+    that:
+      - kopia_backup.bucket | length > 0
+      - kopia_backup.access_key | length > 0
+      - kopia_backup.secret_key | length > 0
+      - kopia_backup.password | length > 0
+      - kopia_backup.sources | length > 0
+    fail_msg: kopia_backup.bucket, access_key, secret_key, password and sources must be set
+
+- name: Create /etc/apt/keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add the Kopia apt key
+  ansible.builtin.shell: curl -fsSL https://kopia.io/signing-key | gpg --dearmor -o /etc/apt/keyrings/kopia-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kopia-keyring.gpg
+
+- name: Add the Kopia apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kopia.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/kopia-keyring.gpg] http://packages.kopia.io/apt/ stable main
+  register: kopia_backup_repo
+
+- name: Install Kopia
+  ansible.builtin.apt:
+    name: kopia
+    state: present
+    update_cache: "{{ kopia_backup_repo is changed }}"
+
+- name: Read the repository connection
+  ansible.builtin.command: kopia repository status
+  environment:
+    KOPIA_CHECK_FOR_UPDATES: "false"
+  register: kopia_backup_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Connect the repository
+  ansible.builtin.command:
+    argv: "{{ argv + (cache if kopia_backup.content_cache_size_mb else []) }}"
+  vars:
+    argv:
+      - kopia
+      - repository
+      - connect
+      - s3
+      - --endpoint={{ kopia_backup.endpoint }}
+      - --bucket={{ kopia_backup.bucket }}
+      - --override-hostname={{ kopia_backup.hostname }}
+      - --override-username=root
+    cache:
+      - --content-cache-size-mb={{ kopia_backup.content_cache_size_mb }}
+      - --metadata-cache-size-mb={{ kopia_backup.metadata_cache_size_mb }}
+  # Secrets through the environment, flags would show them in the process list
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ kopia_backup.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ kopia_backup.secret_key }}"
+    KOPIA_PASSWORD: "{{ kopia_backup.password }}"
+    KOPIA_CHECK_FOR_UPDATES: "false"
+  when: kopia_backup_status.rc != 0
+  no_log: true
+
+- name: Install the backup script
+  ansible.builtin.template:
+    src: kopia-backup.j2
+    dest: /usr/local/sbin/kopia-backup
+    mode: "0755"
+
+- name: Install the systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop: [kopia-backup.service, kopia-backup.timer]
+  register: kopia_backup_units
+
+- name: Enable the timer
+  ansible.builtin.systemd:
+    name: kopia-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ kopia_backup_units is changed }}"
