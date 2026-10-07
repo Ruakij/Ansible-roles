@@ -20,7 +20,8 @@ kopia_backup:
   dumps: []
   # Snapshot the newest k3s etcd snapshot, staged in /var/backups/etcd.
   etcd_snapshot: false
-  on_calendar: "*-*-* 03:30"
+  # Explicit UTC: the hosts run in different timezones.
+  on_calendar: "*-*-* 03:30 UTC"
   randomized_delay: ""
   # Extra units the service starts after, e.g. docker.service for dumps.
   after: []
