@@ -1,0 +1,118 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+{% macro list(map) -%}
+{{ map | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | map('string') | unique | join(', ') }}
+{%- endmacro %}
+{% macro addr_set(name, type, map) -%}
+set {{ name }} {
+		type {{ type }}; flags interval; auto-merge;
+{% if list(map) %}
+		elements = { {{ list(map) }} }
+{% endif %}
+	}
+{%- endmacro %}
+{% set cluster = firewall.cluster | default({}, true) %}
+{% set cluster_ifaces = cluster.ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
+{% set internal_ifaces = firewall.internal_ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
+{% set guest_ifaces = firewall.guest_ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
+{% set guest_match = 'iifname { "' ~ (guest_ifaces | join('", "')) ~ '" }' %}
+
+# Declare-then-delete makes every load one atomic transaction that replaces
+# only this table; Cilium, Docker, NetBird and CrowdSec tables stay untouched.
+table inet host {}
+delete table inet host
+
+{% if firewall.geo_countries %}
+include "/etc/nftables.d/host-geo.nft"
+{% endif %}
+
+table inet host {
+	{{ addr_set('admin_v4', 'ipv4_addr', firewall.admin.v4) }}
+	{{ addr_set('admin_v6', 'ipv6_addr', firewall.admin.v6) }}
+	{{ addr_set('cluster_v4', 'ipv4_addr', cluster.v4) }}
+	{{ addr_set('cluster_v6', 'ipv6_addr', cluster.v6) }}
+	set ssh_meter_v4 {
+		type ipv4_addr; flags dynamic; timeout 10m; size 65535;
+	}
+	set ssh_meter_v6 {
+		type ipv6_addr; flags dynamic; timeout 10m; size 65535;
+	}
+
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		ct state established,related accept
+		ct state invalid drop
+		iif lo accept
+
+		icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } accept
+		icmpv6 type { echo-request, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert, mld-listener-query } accept
+		udp sport 67 udp dport 68 accept
+		meta nfproto ipv6 udp sport 547 udp dport 546 accept
+{% if cluster_ifaces or list(cluster.v4) or list(cluster.v6) %}
+
+		# ponytail: the cluster ring trusts every port between nodes and pods;
+		# per-port lists (6443, 10250, 2379-2380, 4240, 8472, ...) are the upgrade path.
+{% for iface in cluster_ifaces %}
+		iifname "{{ iface }}" accept
+{% endfor %}
+		iifname "wt0" ip saddr @cluster_v4 accept
+		iifname "wt0" ip6 saddr @cluster_v6 accept
+{% endif %}
+{% if internal_ifaces %}
+
+		# ponytail: internal bridges are trusted on every port; per-port lists are the upgrade path.
+{% for iface in internal_ifaces %}
+		iifname "{{ iface }}" accept
+{% endfor %}
+{% endif %}
+{% if guest_ifaces %}
+
+		# Pods on k3s guests egress through the node IP, so guest bridges get
+		# only DHCP and router solicitations beyond the public zone.
+		{{ guest_match }} udp dport 67 accept
+		{{ guest_match }} icmpv6 type nd-router-solicit accept
+{% endif %}
+
+		# VPN peers get the vpn ports, then everything public.
+		iifname "wt0" jump vpn
+		jump public
+	}
+
+	chain vpn {
+{% if list(firewall.vpn.tcp) %}
+		tcp dport { {{ list(firewall.vpn.tcp) }} } accept
+{% endif %}
+{% if list(firewall.vpn.udp) %}
+		udp dport { {{ list(firewall.vpn.udp) }} } accept
+{% endif %}
+	}
+
+	chain public {
+{% if list(firewall.public.tcp) %}
+		tcp dport { {{ list(firewall.public.tcp) }} } accept
+{% endif %}
+{% if list(firewall.public.udp) %}
+		udp dport { {{ list(firewall.public.udp) }} } accept
+{% endif %}
+{% if list(firewall.geo.tcp) %}
+		tcp dport { {{ list(firewall.geo.tcp) }} } jump geo
+{% endif %}
+	}
+
+	chain geo {
+{% if guest_ifaces %}
+		# Guest IPv6 addresses sit inside the geo sets.
+		{{ guest_match }} return
+{% endif %}
+		ip saddr @admin_v4 accept
+		ip6 saddr @admin_v6 accept
+		tcp dport 22 ct state new update @ssh_meter_v4 { ip saddr limit rate over {{ firewall.ssh_rate_limit }} } drop
+		# One IPv6 client usually holds a whole /64.
+		tcp dport 22 ct state new update @ssh_meter_v6 { ip6 saddr & ffff:ffff:ffff:ffff:: limit rate over {{ firewall.ssh_rate_limit }} } drop
+{% if firewall.geo_countries %}
+		ip saddr @geo_v4 accept
+		ip6 saddr @geo_v6 accept
+{% endif %}
+	}
+}

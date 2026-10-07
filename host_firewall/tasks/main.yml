@@ -1,0 +1,168 @@
+---
+- name: Install nftables and curl
+  ansible.builtin.apt:
+    name: [nftables, curl]
+    state: present
+
+- name: Check that this node is part of its own cluster ring
+  ansible.builtin.assert:
+    that: ansible_wt0.ipv4.address in (firewall.cluster.v4 | dict2items | map(attribute='value') | list)
+    fail_msg: "wt0 address {{ ansible_wt0.ipv4.address }} is missing from firewall.cluster.v4"
+  when: firewall.cluster.v4 | default({}, true) | length > 0 and ansible_wt0.ipv4.address is defined
+
+- name: Remove the include block of the old nftables role
+  ansible.builtin.blockinfile:
+    path: /etc/nftables.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - nftables"
+    state: absent
+
+- name: Remove the rule files of the old nftables role
+  ansible.builtin.file:
+    path: /etc/nftables/ansible-managed
+    state: absent
+
+- name: Create /etc/nftables.d
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    mode: "0755"
+
+- name: Install the systemd units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop: [nft-host.service, nft-host-geo.service, nft-host-geo.timer]
+  register: firewall_units
+
+- name: Install the rollback script
+  ansible.builtin.copy:
+    src: nft-host-rollback
+    dest: /usr/local/sbin/nft-host-rollback
+    mode: "0755"
+
+- name: Geo sets
+  when: firewall.geo_countries | length > 0
+  block:
+    - name: Install the geo set updater
+      ansible.builtin.template:
+        src: nft-host-geo.j2
+        dest: /usr/local/sbin/nft-host-geo
+        mode: "0755"
+
+    - name: Build the geo sets on first run
+      ansible.builtin.command: /usr/local/sbin/nft-host-geo
+      args:
+        creates: /etc/nftables.d/host-geo.nft
+
+    - name: Read the geo sets file
+      ansible.builtin.stat:
+        path: /etc/nftables.d/host-geo.nft
+      register: firewall_geo
+
+    # Without geo sets the public SSH port would only answer NetBird and the admin set.
+    - name: Require non-empty geo sets
+      ansible.builtin.assert:
+        that: firewall_geo.stat.exists and firewall_geo.stat.size > 0
+        fail_msg: /etc/nftables.d/host-geo.nft is missing or empty, refusing to apply the firewall
+      # Check mode neither installs the updater nor builds the sets.
+      when: not ansible_check_mode
+
+    - name: Enable the geo set timer
+      ansible.builtin.systemd:
+        name: nft-host-geo.timer
+        enabled: true
+        state: started
+        daemon_reload: "{{ firewall_units is changed }}"
+      # Check mode does not install the unit.
+      ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Stop the geo set refresh
+  when: firewall.geo_countries | length == 0
+  block:
+    - name: Disable the geo set timer
+      ansible.builtin.systemd:
+        name: nft-host-geo.timer
+        enabled: false
+        state: stopped
+        daemon_reload: "{{ firewall_units is changed }}"
+
+    - name: Remove the geo sets file
+      ansible.builtin.file:
+        path: /etc/nftables.d/host-geo.nft
+        state: absent
+
+- name: Render the rule set
+  ansible.builtin.template:
+    src: host.nft.j2
+    dest: /etc/nftables.d/host.nft
+    mode: "0644"
+    validate: nft -c -f %s
+  register: firewall_rules
+
+- name: Read the firewall unit state
+  ansible.builtin.command: systemctl is-active nft-host.service
+  register: firewall_active
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Apply the rule set with a rollback timer
+  when:
+    - firewall_rules is changed or firewall_units is changed or firewall_active.stdout != 'active'
+    - not ansible_check_mode
+  block:
+    # A failed run of the transient unit keeps its name taken for systemd-run.
+    - name: Clear a leftover rollback timer
+      ansible.builtin.shell: >-
+        systemctl stop nft-host-rollback.timer;
+        systemctl reset-failed nft-host-rollback.timer nft-host-rollback.service;
+        true
+      changed_when: false
+
+    # Unless disarmed below, this moves the rejected rule file aside so a reboot
+    # does not load it again, and reloads the last confirmed one; without one
+    # it drops the table.
+    - name: Arm the rollback
+      ansible.builtin.command: systemd-run --on-active={{ firewall.rollback_seconds }} --unit=nft-host-rollback /usr/local/sbin/nft-host-rollback
+      changed_when: false
+
+    - name: Load the rule set
+      ansible.builtin.systemd:
+        name: nft-host.service
+        enabled: true
+        state: reloaded
+        daemon_reload: true
+
+    # A reused SSH control socket would hide a lockout, so test a fresh connection.
+    - name: Drop the SSH connection
+      ansible.builtin.meta: reset_connection
+
+    - name: Reconnect through the new rule set
+      ansible.builtin.wait_for_connection:
+        timeout: "{{ (firewall.rollback_seconds / 2) | int }}"
+
+    - name: Check the services behind the new rule set
+      ansible.builtin.shell: "{{ item.value }}"
+      loop: "{{ firewall.confirm | default({}, true) | dict2items | rejectattr('value', 'none') }}"
+      loop_control:
+        label: "{{ item.key }}"
+      register: firewall_confirm
+      until: firewall_confirm.rc == 0
+      retries: "{{ (firewall.rollback_seconds / 20) | int }}"
+      delay: 5
+      changed_when: false
+
+    # Fails when the timer already fired, so a slow check cannot pass for a rolled-back host.
+    - name: Disarm the rollback
+      ansible.builtin.shell: >-
+        test "$(systemctl show --property=SubState --value nft-host-rollback.timer)" = waiting &&
+        systemctl stop nft-host-rollback.timer
+      changed_when: true
+
+    - name: Keep the rule set as the last confirmed one
+      ansible.builtin.copy:
+        src: /etc/nftables.d/host.nft
+        dest: /etc/nftables.d/host.nft.good
+        remote_src: true
+        mode: "0644"

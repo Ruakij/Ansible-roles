@@ -1,0 +1,36 @@
+---
+# Port and address maps are name -> value so group_vars and host_vars levels
+# merge into one map (hash_behaviour = merge); a null value drops an entry.
+# Ports are numbers or "first-last" ranges.
+firewall:
+  public:
+    tcp: {}
+    udp: {}
+  # Accepted only from the geo sets or the admin set.
+  geo:
+    tcp: {}
+  # Accepted on wt0 before the public zone is evaluated.
+  vpn:
+    tcp: {}
+    udp: {}
+  admin:
+    v4: {}
+    v6: {}
+  # Interface names (nft wildcards allowed) whose traffic is trusted.
+  internal_ifaces: {}
+  # Guest bridges (Proxmox vmbr*): DHCP, router solicitations and the public
+  # zone only, never the geo ports.
+  guest_ifaces: {}
+  # Kubernetes ring: pod interfaces, and node NetBird IPs / pod CIDRs on wt0.
+  cluster:
+    ifaces: {}
+    v4: {}
+    v6: {}
+  ssh_rate_limit: "10/minute burst 5 packets"
+  # EU-27 plus CH, NO, GB, IS, LI (ipdeny country codes). Empty leaves the geo
+  # ports to the admin set; a load peaks at about 60 MB of kernel memory, too much for a 1 GB host.
+  geo_countries: [at, be, bg, hr, cy, cz, dk, ee, fi, fr, de, gr, hu, ie, it, lv, lt, lu, mt, nl, pl, pt, ro, sk, si, es, se, ch, "no", gb, is, li]
+  rollback_seconds: 120
+  # name -> shell command that has to exit 0 through the new rule set before the
+  # rollback is disarmed; retried for a quarter of the rollback window.
+  confirm: {}

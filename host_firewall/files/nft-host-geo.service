@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh the geo sets of the host firewall
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nft-host-geo

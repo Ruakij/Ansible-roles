@@ -1,7 +1,0 @@
-- import_tasks: ./prerequisites.yml
-
-- import_tasks: ./setup-packages.yml
-
-- import_tasks: ./deploy-rules/main.yml
-
-- import_tasks: ./apply-files.yml

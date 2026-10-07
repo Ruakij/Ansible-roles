@@ -1,0 +1,22 @@
+[Unit]
+Description=Host input firewall (nftables table inet host)
+# Same early-boot placement as nftables.service. Its "flush ruleset" on start,
+# reload and stop would wipe this table, so load after it and follow all three.
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+After=nftables.service
+PartOf=nftables.service
+ReloadPropagatedFrom=nftables.service
+Conflicts=shutdown.target
+ConditionPathExists=/etc/nftables.d/host.nft
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/host.nft
+ExecReload=/usr/sbin/nft -f /etc/nftables.d/host.nft
+ExecStop=-/usr/sbin/nft delete table inet host
+
+[Install]
+WantedBy=sysinit.target

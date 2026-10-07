@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily refresh of the host firewall geo sets
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

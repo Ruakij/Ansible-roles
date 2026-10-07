@@ -1,8 +1,0 @@
-- name: Load group rules
-  command: "nft -f /etc/nftables/ansible-managed/{{ item }}.nft"
-  loop: "{{ combined_rules | list }}"
-  when: not nftables.apply_global
-
-- name: Load global rule file
-  command: "nft -f /etc/nftables.nft"
-  when: nftables.apply_global

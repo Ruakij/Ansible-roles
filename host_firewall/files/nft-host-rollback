@@ -1,0 +1,9 @@
+#!/bin/sh
+# Started by a transient timer before a rule set load; Ansible stops the timer
+# once the new rule set is confirmed.
+cd /etc/nftables.d || exit 1
+mv -f host.nft host.nft.rolled-back
+if [ -s host.nft.good ]; then
+	cp host.nft.good host.nft && nft -f host.nft && exit 0
+fi
+nft delete table inet host
