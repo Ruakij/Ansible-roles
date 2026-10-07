@@ -1,0 +1,19 @@
+# Containers share the host kernel clock and cannot discipline it themselves.
+- name: Configure time synchronisation
+  when: ansible_facts['virtualization_role'] != 'guest' or ansible_facts['virtualization_type'] not in ['lxc', 'docker', 'podman', 'container']
+  block:
+    - name: Install systemd-timesyncd
+      package:
+        name: systemd-timesyncd
+        state: present
+
+    - name: Enable systemd-timesyncd
+      systemd:
+        name: systemd-timesyncd
+        enabled: yes
+        state: started
+
+# Logs and local-time timers line up across hosts.
+- name: Set the timezone to UTC
+  community.general.timezone:
+    name: Etc/UTC
