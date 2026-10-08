@@ -31,6 +31,11 @@ firewall:
   dnat: {}
   # IPv4 source NAT: name -> nft match, e.g. 'oifname "vmbr0"'.
   masquerade: {}
+  # Forwarded traffic to guarded guests: name -> {ifaces, v4, v6}, where v4 and
+  # v6 are {daddr, tcp: ports, icmp: icmp or icmpv6 types}. Replies and traffic
+  # in on ifaces pass, the listed ports and types pass, the rest to daddr drops;
+  # traffic to other addresses is not filtered.
+  forward_guard: {}
   ssh_rate_limit: "10/minute burst 5 packets"
   # EU-27 plus CH, NO, GB, IS, LI (ipdeny country codes). Empty leaves the geo
   # ports to the admin set; a load peaks at about 60 MB of kernel memory, too much for a 1 GB host.

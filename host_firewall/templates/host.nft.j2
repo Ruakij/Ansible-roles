@@ -18,6 +18,7 @@ set {{ name }} {
 {% set guest_match = 'iifname { "' ~ (guest_ifaces | join('", "')) ~ '" }' %}
 {% set dnat = firewall.dnat | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | list %}
 {% set masquerade = firewall.masquerade | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
+{% set forward_guard = firewall.forward_guard | default({}, true) | dict2items | rejectattr('value', 'none') | list %}
 
 # Declare-then-delete makes every load one atomic transaction that replaces
 # only these tables; Cilium, Docker, NetBird and CrowdSec tables stay untouched.
@@ -119,6 +120,32 @@ table inet host {
 		ip6 saddr @geo_v6 accept
 {% endif %}
 	}
+{% if forward_guard %}
+
+	chain forward {
+		type filter hook forward priority filter; policy accept;
+{% for guard in forward_guard %}
+
+		# {{ guard.key }}
+{% set ifaces = guard.value.ifaces | default({}, true) | dict2items | rejectattr('value', 'none') | map(attribute='value') | unique | list %}
+{% for fam, l3, icmp in [('v4', 'ip', 'icmp'), ('v6', 'ip6', 'icmpv6')] if list((guard.value[fam] | default({}, true)).daddr) %}
+{% set zone = guard.value[fam] %}
+{% set match = l3 ~ ' daddr { ' ~ list(zone.daddr) ~ ' }' %}
+		{{ match }} ct state established,related accept
+{% if ifaces %}
+		{{ match }} iifname { "{{ ifaces | join('", "') }}" } accept
+{% endif %}
+{% if list(zone.tcp) %}
+		{{ match }} tcp dport { {{ list(zone.tcp) }} } accept
+{% endif %}
+{% if list(zone.icmp) %}
+		{{ match }} {{ icmp }} type { {{ list(zone.icmp) }} } accept
+{% endif %}
+		{{ match }} drop
+{% endfor %}
+{% endfor %}
+	}
+{% endif %}
 }
 {% if dnat or masquerade %}
 
