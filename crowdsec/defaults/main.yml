@@ -10,8 +10,15 @@ crowdsec:
   scenarios: {}
   # path below /etc/crowdsec -> content, for local parsers and scenarios.
   local_files: {}
-  # name -> CIDR (single addresses as /32 or /128) never acted upon by this agent.
+  # name -> CIDR (single addresses as /32 or /128) never acted upon. Joined by
+  # the public_ips (same format) of every inventory host, then whitelisted by
+  # this agent and, when lapi_allowlist is set, allowlisted on the LAPI.
   whitelist: {}
+  # LAPI allowlist kept equal to the whitelist; it also drops alerts on ranges
+  # holding a whitelisted address, which a parser whitelist cannot.
+  lapi_allowlist: ""
+  # Host whose k3s kubectl reaches the LAPI pod (crowdsec/crowdsec-lapi).
+  lapi_kubectl_host: ""
   # name -> acquisition datasource, written to /etc/crowdsec/acquis.d/<name>.yaml.
   acquisition: {}
   # packagecloud has no trixie suite yet; the bookworm build is static Go.

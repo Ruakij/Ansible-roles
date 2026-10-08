@@ -1,0 +1,4 @@
+---
+crowdsec_whitelist: >-
+  {{ (crowdsec.whitelist | dict2items | rejectattr('value', 'none') | map(attribute='value') | list
+  + groups['all'] | map('extract', hostvars, 'public_ips') | select('defined') | flatten) | unique }}

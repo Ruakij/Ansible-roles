@@ -187,3 +187,37 @@
     enabled: true
     state: started
   loop: [crowdsec.service, crowdsec-firewall-bouncer.service]
+
+- name: Sync the LAPI allowlist
+  when: crowdsec.lapi_allowlist | length > 0
+  run_once: true
+  delegate_to: "{{ crowdsec.lapi_kubectl_host }}"
+  vars:
+    crowdsec_lapi_cscli: k3s kubectl -n crowdsec exec deploy/crowdsec-lapi -c crowdsec-lapi -- cscli
+  block:
+    - name: Read the LAPI allowlist
+      ansible.builtin.command: "{{ crowdsec_lapi_cscli }} allowlists inspect {{ crowdsec.lapi_allowlist }} -o json"
+      register: crowdsec_allowlist_json
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Create the LAPI allowlist
+      ansible.builtin.command: >-
+        {{ crowdsec_lapi_cscli }} allowlists create {{ crowdsec.lapi_allowlist }}
+        -d "Internal ranges and the public addresses of all hosts, managed by Ansible"
+      when: crowdsec_allowlist_json.rc != 0
+
+    # cscli stores single addresses without their /32 or /128.
+    - name: Update the LAPI allowlist
+      ansible.builtin.command: "{{ crowdsec_lapi_cscli }} allowlists {{ item.action }} {{ crowdsec.lapi_allowlist }} {{ item.cidrs | join(' ') }}"
+      vars:
+        crowdsec_allowlist_wanted: "{{ crowdsec_whitelist | map('regex_replace', '/(32|128)$', '') | list }}"
+        crowdsec_allowlist_present: >-
+          {{ ((crowdsec_allowlist_json.stdout | default('{}', true) | from_json).get('items') or []) | map(attribute='value') | list }}
+      loop:
+        - { action: add, cidrs: "{{ crowdsec_allowlist_wanted | difference(crowdsec_allowlist_present) }}" }
+        - { action: remove, cidrs: "{{ crowdsec_allowlist_present | difference(crowdsec_allowlist_wanted) }}" }
+      loop_control:
+        label: "{{ item.action }} {{ item.cidrs | join(' ') }}"
+      when: item.cidrs | length > 0
