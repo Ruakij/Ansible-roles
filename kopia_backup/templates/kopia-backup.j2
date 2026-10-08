@@ -5,6 +5,10 @@ set -uo pipefail
 export KOPIA_CHECK_FOR_UPDATES=false
 failed=0
 sources=()
+{% if kopia_backup.pre_command %}
+
+{{ kopia_backup.pre_command }} || { echo "pre_command failed" >&2; failed=1; }
+{% endif %}
 {% if kopia_backup.etcd_snapshot %}
 
 # Only the latest etcd snapshot; the live etcd dir is not consistent on disk and older snapshots only add churn

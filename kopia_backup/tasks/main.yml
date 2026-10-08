@@ -15,6 +15,11 @@
     state: directory
     mode: "0755"
 
+- name: Install gpg for the apt key
+  ansible.builtin.apt:
+    name: gpg
+    state: present
+
 - name: Add the Kopia apt key
   ansible.builtin.shell: curl -fsSL https://kopia.io/signing-key | gpg --dearmor -o /etc/apt/keyrings/kopia-keyring.gpg
   args:
