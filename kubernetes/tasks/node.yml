@@ -47,3 +47,12 @@
     value: "{{ item.value }}"
     sysctl_file: /etc/sysctl.d/90-inotify.conf
   loop: "{{ {'fs.inotify.max_user_instances': 65536, 'fs.inotify.max_user_watches': 4194304} | dict2items }}"
+
+# Without it etcd serves metrics on 127.0.0.1 only, out of reach of vmagent.
+- name: Expose the etcd metrics on the node IP
+  tags: etcd_metrics
+  when: not (kubernetes.config_extra['disable-etcd'] | default(false))
+  lineinfile:
+    path: /etc/rancher/k3s/config.yaml
+    regexp: '^etcd-expose-metrics:'
+    line: 'etcd-expose-metrics: true'
