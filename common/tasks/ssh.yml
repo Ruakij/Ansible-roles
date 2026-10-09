@@ -1,12 +1,20 @@
-- name: Disable SSH password auth
-  lineinfile:
-      dest: /etc/ssh/sshd_config
-      regexp: '^PasswordAuthentication\s*yes'
-      line: "PasswordAuthentication no"
-  register: sshd_config
+- name: Check if SSH daemon is active
+  systemd:
+    name: sshd
+    state: started
+  register: sshd_status
 
-- name: Restart SSH daemon
-  service:
-      name: sshd
-      state: restarted
-  when: sshd_config.changed
+- block:
+    - name: Disable SSH password auth
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication\s*yes'
+        line: "PasswordAuthentication no"
+      register: sshd_config
+
+    - name: Restart SSH daemon
+      service:
+        name: sshd
+        state: restarted
+      when: sshd_config.changed
+  when: sshd_status.status.ActiveState == 'active'
