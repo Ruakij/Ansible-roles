@@ -1,0 +1,36 @@
+# config.yaml is edited in place, not templated: the live files carry hand
+# settings the template does not know. k3s reads them on its next restart,
+# which stays manual so etcd members restart one at a time.
+
+- name: Kubelet image garbage collection
+  tags: kubelet_gc
+  block:
+    - name: Create the kubelet drop-in directory
+      file:
+        path: /etc/rancher/k3s/kubelet.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: Set the image garbage collection thresholds
+      copy:
+        dest: /etc/rancher/k3s/kubelet.conf.d/10-image-gc.conf
+        mode: "0644"
+        content: |
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          imageGCHighThresholdPercent: 70
+          imageGCLowThresholdPercent: 55
+          imageMaximumGCAge: 168h
+
+    - name: Declare the kubelet-arg list in the k3s config
+      lineinfile:
+        path: /etc/rancher/k3s/config.yaml
+        regexp: '^kubelet-arg:'
+        line: 'kubelet-arg:'
+
+    - name: Point the kubelet at the drop-in directory
+      lineinfile:
+        path: /etc/rancher/k3s/config.yaml
+        regexp: '^\s*- config-dir='
+        line: '  - config-dir=/etc/rancher/k3s/kubelet.conf.d'
+        insertafter: '^kubelet-arg:'
