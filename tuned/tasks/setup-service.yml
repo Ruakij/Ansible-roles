@@ -1,0 +1,5 @@
+- name: Make sure service is started
+  service:
+    name: tuned
+    enabled: true
+    state: "started"

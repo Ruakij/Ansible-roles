@@ -1,0 +1,5 @@
+- name: Set profile
+  command: tuned-adm profile throughput-performance
+  register: command
+  failed_when:
+    - "command.rc != 0"

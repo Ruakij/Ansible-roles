@@ -1,0 +1,5 @@
+- import_tasks: ./install-packages.yml
+
+- import_tasks: ./setup-service.yml
+
+- import_tasks: ./set-profile.yml

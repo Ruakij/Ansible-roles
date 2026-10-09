@@ -1,0 +1,6 @@
+- name: Install Packages
+  package:
+    name:
+      - tuned
+      - tuned-utils
+      - tuned-utils-systemtap
