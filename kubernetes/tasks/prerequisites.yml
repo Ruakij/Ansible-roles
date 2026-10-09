@@ -7,11 +7,11 @@
   copy:
     dest: "/etc/sysctl.d/kubernetes.conf"
     content: |
-        net.bridge.bridge-nf-call-ip6tables = 1
-        net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.bridge.bridge-nf-call-iptables = 1
 
-        net.ipv4.conf.all.forwarding=1
-        net.ipv6.conf.all.forwarding=1
+      net.ipv4.conf.all.forwarding=1
+      net.ipv6.conf.all.forwarding=1
   notify: reload_sysctl
 
 #- name: Disable swap
@@ -19,15 +19,15 @@
 
 - name: Install required packages
   package:
-      name:
-          #- containerd
-          #- iptables
-          # For Longhorn:
-          - nfs-common
-          - open-iscsi
-      state: present
+    name:
+      #- containerd
+      #- iptables
+      # For Longhorn:
+      - nfs-common
+      - open-iscsi
+    state: present
 
--  import_tasks: ./prerequisites/containerd.yml
+- import_tasks: ./prerequisites/containerd.yml
 
 - name: Gather interface-name
   set_fact:
@@ -35,8 +35,14 @@
 
 - name: Getting nodeIp-data from interface
   set_fact:
-    nodeip_ipv4: "{{ ansible_facts[ interface ].ipv4.address }}"
-    nodeip_ipv6: "{{ ansible_facts[ interface ].ipv6[0].address if ansible_facts[ interface ].ipv6 is defined }}"
+    nodeip_ipv4: >-
+      {{ (ansible_facts[interface].ipv4.address)
+         if (ansible_facts is defined and ansible_facts.get(interface) is defined and ansible_facts[interface].ipv4 is defined)
+         else (ansible_default_ipv4.address | default('')) }}
+    nodeip_ipv6: >-
+      {{ (ansible_facts[interface].ipv6[0].address)
+         if (ansible_facts is defined and ansible_facts.get(interface) is defined and ansible_facts[interface].ipv6 is defined and (ansible_facts[interface].ipv6 | length) > 0)
+         else (ansible_default_ipv6.address | default('')) }}
 
 - name: Run handlers to reload configurations
   meta: flush_handlers
