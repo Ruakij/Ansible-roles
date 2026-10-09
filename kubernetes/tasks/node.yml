@@ -34,3 +34,16 @@
         regexp: '^\s*- config-dir='
         line: '  - config-dir=/etc/rancher/k3s/kubelet.conf.d'
         insertafter: '^kubelet-arg:'
+
+# Every pod watching its config files takes inotify instances and watches from
+# the per-user pool. An LXC container inherits these from its host. Only this
+# file is loaded: sysctl --system would also apply distribution defaults such as
+# rp_filter that differ from the live values Cilium relies on.
+- name: Raise the inotify limits
+  tags: inotify
+  when: ansible_facts['virtualization_type'] != 'lxc'
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/90-inotify.conf
+  loop: "{{ {'fs.inotify.max_user_instances': 65536, 'fs.inotify.max_user_watches': 4194304} | dict2items }}"
