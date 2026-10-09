@@ -21,6 +21,11 @@ cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }}
 service-cidr: {{ kubernetes.ipPool.ipv4.service_cidr }}
 {% endif %}
 
+# Pin the apiserver advertise-address to the mesh IP: node-external-ip above
+# otherwise gets picked, leaking a LAN-only address into the default/kubernetes
+# Endpoints object that other nodes cannot route to.
+advertise-address: {{ nodeip_ipv4 }}
+
 egress-selector-mode: disabled
 
 # Network-plugin
@@ -47,3 +52,12 @@ node-label:
 {% endif %}
 
 {{ kubernetes.config_extra | to_yaml }}
+
+# Image garbage collection tuning (drop-in KubeletConfiguration)
+kubelet-arg:
+  - config-dir=/etc/rancher/k3s/kubelet.conf.d
+{% if not kubernetes.config_extra['disable-etcd'] | default(false) %}
+
+# etcd members only
+{{ kubernetes.etcd_config_extra | to_nice_yaml(indent=2) }}
+{% endif %}

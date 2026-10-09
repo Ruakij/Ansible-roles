@@ -4,11 +4,30 @@
     state: directory
     mode: '0755'
 
+- name: Read the live k3s config
+  slurp:
+    src: /etc/rancher/k3s/config.yaml
+  register: live_config
+  failed_when: false
+
+# A rewrite restarts k3s, so the file is written only when k3s would read other
+# settings: the live files differ from the rendering in comments, order and
+# whitespace.
 - name: Deploy k3s config
   ansible.builtin.template:
     src: k3s/{{ type }}/config.yaml.jinja2
     dest: /etc/rancher/k3s/config.yaml
   register: config
+  when: >-
+    live_config.content is not defined or
+    (live_config.content | b64decode | from_yaml) != (lookup('template', 'k3s/' ~ type ~ '/config.yaml.jinja2') | from_yaml)
+
+- name: Read the installed k3s version
+  command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
 
 - name: Download install-script
   get_url:

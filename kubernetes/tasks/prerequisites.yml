@@ -25,7 +25,7 @@
           # For Longhorn:
           - nfs-common
           - open-iscsi
-      state: latest
+      state: present
 
 -  import_tasks: ./prerequisites/containerd.yml
 

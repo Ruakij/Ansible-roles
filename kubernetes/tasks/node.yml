@@ -1,7 +1,3 @@
-# config.yaml is edited in place, not templated: the live files carry hand
-# settings the template does not know. k3s reads them on its next restart,
-# which stays manual so etcd members restart one at a time.
-
 - name: Kubelet image garbage collection
   tags: kubelet_gc
   block:
@@ -22,19 +18,6 @@
           imageGCLowThresholdPercent: 55
           imageMaximumGCAge: 168h
 
-    - name: Declare the kubelet-arg list in the k3s config
-      lineinfile:
-        path: /etc/rancher/k3s/config.yaml
-        regexp: '^kubelet-arg:'
-        line: 'kubelet-arg:'
-
-    - name: Point the kubelet at the drop-in directory
-      lineinfile:
-        path: /etc/rancher/k3s/config.yaml
-        regexp: '^\s*- config-dir='
-        line: '  - config-dir=/etc/rancher/k3s/kubelet.conf.d'
-        insertafter: '^kubelet-arg:'
-
 # Every pod watching its config files takes inotify instances and watches from
 # the per-user pool. An LXC container inherits these from its host. Only this
 # file is loaded: sysctl --system would also apply distribution defaults such as
@@ -47,12 +30,3 @@
     value: "{{ item.value }}"
     sysctl_file: /etc/sysctl.d/90-inotify.conf
   loop: "{{ {'fs.inotify.max_user_instances': 65536, 'fs.inotify.max_user_watches': 4194304} | dict2items }}"
-
-# Without it etcd serves metrics on 127.0.0.1 only, out of reach of vmagent.
-- name: Expose the etcd metrics on the node IP
-  tags: etcd_metrics
-  when: not (kubernetes.config_extra['disable-etcd'] | default(false))
-  lineinfile:
-    path: /etc/rancher/k3s/config.yaml
-    regexp: '^etcd-expose-metrics:'
-    line: 'etcd-expose-metrics: true'

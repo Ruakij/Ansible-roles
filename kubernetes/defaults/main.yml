@@ -32,6 +32,15 @@ kubernetes:
   # One of [traefik-ingress]
   ingress_controller: traefik-ingress
 
+  # k3s version to install, e.g. v1.37.1+k3s1. An installed k3s is replaced only
+  # when this is set and differs; empty installs the latest when k3s is missing.
+  version: ""
+
+  # Extra config of the nodes running etcd, left out with disable-etcd
+  etcd_config_extra:
+    # Without it etcd serves metrics on 127.0.0.1 only, out of reach of vmagent
+    etcd-expose-metrics: true
+
   config_extra:
     # etcd-tuning
     #  heartbeat: 0.5-1.5x of rtt

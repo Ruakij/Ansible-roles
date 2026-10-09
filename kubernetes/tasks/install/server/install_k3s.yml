@@ -1,6 +1,10 @@
 - name: Install K3s-server for 1st-node
   command: /root/k3s_install.sh {{ type }}
-  when: "inventory_hostname == groups['kubernetes'][0]"
+  environment:
+    INSTALL_K3S_VERSION: "{{ kubernetes.version }}"
+  when:
+    - "inventory_hostname == groups['kubernetes'][0]"
+    - k3s_installed.rc != 0 or (kubernetes.version != '' and ('k3s version ' ~ kubernetes.version ~ ' ') not in k3s_installed.stdout)
   register: command
   changed_when: "'No change detected' not in command.stdout"
 
@@ -19,7 +23,11 @@
 
 - name: Install K3s-server for other nodes
   command: /root/k3s_install.sh {{ type }}
-  when: "inventory_hostname != groups['kubernetes'][0]"
+  environment:
+    INSTALL_K3S_VERSION: "{{ kubernetes.version }}"
+  when:
+    - "inventory_hostname != groups['kubernetes'][0]"
+    - k3s_installed.rc != 0 or (kubernetes.version != '' and ('k3s version ' ~ kubernetes.version ~ ' ') not in k3s_installed.stdout)
   register: command
   changed_when: "'No change detected' not in command.stdout"
   until: "command is not failed"
