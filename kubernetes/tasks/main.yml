@@ -3,4 +3,4 @@
 - import_tasks: ./node.yml
 
 - import_tasks: ./install.yml
-
+  when: target_host is not defined or inventory_hostname == target_host
