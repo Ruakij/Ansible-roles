@@ -7,7 +7,7 @@ kubernetes:
       service_cidr: 10.43.0.0/16
     ipv6:
       # Minimum: /120
-      cluster_cidr: fd42::/56
+      cluster_cidr: fd42::/112
       service_cidr: fd43::/112
 
     # Interface to grab node-IPv4/v6 from
