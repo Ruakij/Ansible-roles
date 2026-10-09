@@ -41,5 +41,10 @@
   when:
     - "kubernetes.network.plugin == 'calico'"
 
+- name: Deploy cilium
+  import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_cilium.yml
+  when:
+    - "kubernetes.network.plugin == 'cilium'"
+
 - name: Deploy network-helpers
   import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_network_helper.yml

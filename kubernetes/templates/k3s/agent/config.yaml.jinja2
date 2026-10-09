@@ -1,3 +1,5 @@
+{% set disabled_components = [] %}
+
 ## Base ##
 node-name: {{ ansible_fqdn }}
 # Join cluster
@@ -21,6 +23,15 @@ node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
 node-ip: {{ nodeip_ipv4 }}
 {% endif %}
 
+# Network-plugin
+{% if kubernetes.network.plugin == "flannel" %}
+{% else %}
+{% if kubernetes.network.plugin == "cilium" %}
+  # Cilium requires servicelb to be disabled when replacing kube-proxy
+  {% set _ = disabled_components.append('servicelb') %}
+{% endif %}
+{% endif %}
+
 ## Label
 # Region & DC
 node-label:
@@ -33,5 +44,10 @@ node-label:
 {% for item in kubernetes.labels_extra %}
   - {{ item }}
 {% endfor %}
+
+# Disabled components
+{% if disabled_components %}
+disable: {{ disabled_components | join(',') }}
+{% endif %}
 
 {{ kubernetes.config_extra | to_yaml }}

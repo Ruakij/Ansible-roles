@@ -23,7 +23,7 @@ kubernetes:
     #  can be used to remove filter
     clean_resolv_conf: false
 
-    # One of [flannel, calico]
+    # One of [none, flannel, calico, cilium]
     plugin: calico
 
     # Helper for networking
@@ -33,7 +33,7 @@ kubernetes:
       #  Helpful, when nodeIp_interface is a wireguard-interface
       routingtabletowg: false
 
-  # One of [traefik-ingress]
+  # One of [none, traefik-ingress, nginx-ingress]
   ingress_controller: traefik-ingress
 
   # k3s version to install, e.g. v1.37.1+k3s1. An installed k3s is replaced only

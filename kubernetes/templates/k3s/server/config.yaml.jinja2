@@ -1,3 +1,5 @@
+{% set disabled_components = [] %}
+
 ## Base ##
 node-name: {{ ansible_fqdn }}
 {% if inventory_hostname == groups['kubernetes'][0] %}
@@ -46,11 +48,15 @@ flannel-backend: vxlan
 {% else %}
 disable-network-policy: true
 flannel-backend: none
+{% if kubernetes.network.plugin == "cilium" %}
+  # Cilium requires servicelb to be disabled when replacing kube-proxy
+  {% set _ = disabled_components.append('servicelb') %}
+{% endif %}
 {% endif %}
 
 # Ingress-plugin
 {% if kubernetes.ingress_controller != "traefik-ingress" %}
-disable: traefik
+{% set _ = disabled_components.append('traefik') %}
 {% endif %}
 
 ## Label
@@ -66,6 +72,11 @@ node-label:
 {% for item in kubernetes.labels_extra %}
   - {{ item }}
 {% endfor %}
+{% endif %}
+
+# Disabled components
+{% if disabled_components %}
+disable: {{ disabled_components | join(',') }}
 {% endif %}
 
 {{ kubernetes.config_extra | to_yaml }}
