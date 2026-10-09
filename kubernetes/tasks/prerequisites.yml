@@ -49,6 +49,7 @@
       shell: "grep '^nameserver' /etc/resolv.conf"
       register: nameserver_line
       changed_when: false
+      check_mode: false
 
     - name: Write /etc/resolv-k3s.conf with only nameservers
       copy:
