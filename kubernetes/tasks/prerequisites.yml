@@ -44,5 +44,17 @@
          if (ansible_facts is defined and ansible_facts.get(interface) is defined and ansible_facts[interface].ipv6 is defined and (ansible_facts[interface].ipv6 | length) > 0)
          else (ansible_default_ipv6.address | default('')) }}
 
+- block:
+    - name: Read resolv.conf
+      shell: "grep '^nameserver' /etc/resolv.conf"
+      register: nameserver_line
+      changed_when: false
+
+    - name: Write /etc/resolv-k3s.conf with only nameservers
+      copy:
+        content: "{{ nameserver_line.stdout }}"
+        dest: /etc/resolv-k3s.conf
+  when: kubernetes.network.clean_resolv_conf is true
+
 - name: Run handlers to reload configurations
   meta: flush_handlers

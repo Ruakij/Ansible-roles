@@ -11,6 +11,10 @@ tls-san:
   - {{ kubernetes.control_plane.dns_name }}
 
 # Networking
+{% if kubernetes.network.clean_resolv_conf %}
+resolv-conf: /etc/resolv-k3s.conf
+{% endif %}
+
 {% if nodeip_ipv6 != "" and kubernetes.ipPool.ipv6 is defined %}
 node-ip: {{ nodeip_ipv4 }},{{ nodeip_ipv6 }}
 cluster-cidr: {{ kubernetes.ipPool.ipv4.cluster_cidr }},{{ kubernetes.ipPool.ipv6.cluster_cidr }}

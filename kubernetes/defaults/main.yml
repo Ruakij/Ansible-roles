@@ -19,6 +19,10 @@ kubernetes:
   token: <shared token for nodes to join>
 
   network:
+    # Copies the current /etc/resolv.conf whilst only keeping "nameserver" lines
+    #  can be used to remove filter
+    clean_resolv_conf: false
+
     # One of [flannel, calico]
     plugin: calico
 
