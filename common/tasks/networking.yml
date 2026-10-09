@@ -1,22 +1,49 @@
 - name: Set sysctl settings for ip-forwarding
   copy:
-      dest: "/etc/sysctl.d/ip-forwarding.conf"
-      content: |
-          net.ipv4.ip_forward           = 1
-          net.ipv6.conf.all.forwarding  = 1
+    dest: "/etc/sysctl.d/ip-forwarding.conf"
+    content: |
+      net.ipv4.ip_forward           = 1
+      net.ipv6.conf.all.forwarding  = 1
   notify: reload_sysctl
 
-- name: Set sysctl settings for ipv6-address-generation
-  copy:
-      dest: "/etc/sysctl.d/ipv6-slaac-address-generation.conf"
-      content: |
-          net.ipv6.conf.default.addr_gen_mode = 2
-          net.ipv6.conf.default.stable_secret = {{ ipv6_stable_secret }}
-  notify: reload_sysctl
+- name: Check if the sysctl configuration file exists
+  stat:
+    path: "/etc/sysctl.d/ipv6-slaac-address-generation.conf"
+  register: sysctl_conf
+
+- block:
+    # - name: Generate IPv6 stable-secret segments
+    #   set_fact:
+    #     stable_secret_segments: "{{ stable_secret_segments | default() + '%0x' | format(range(0, 2**(16*2)) | random(seed=ipv6_stable_secret_seed+inventory_hostname+(stable_secret_segments | default()))) }}"
+    #   loop: "{{ range(4) }}"
+
+    # - name: Format IPv6 stable-secret segments
+    #   set_fact:
+    #     ipv6_stable_secret: "{{ stable_secret_segments | regex_replace('(.{4})(?=.)', '\\1:') }}"
+
+    - name: Generate random IPv6 stable-secret
+      set_fact:
+        ipv6_stable_secret: "{{ 'fd' + (lookup('password', '/dev/null length=30 chars=hex')).split('.')[0][:7] + '::' + (lookup('password', '/dev/null length=4 chars=hex')) }}"
+
+    - name: Set sysctl settings for ipv6-address-generation
+      copy:
+        dest: "/etc/sysctl.d/ipv6-slaac-address-generation.conf"
+        content: |
+          {% if ansible_facts.default_ipv6.interface is defined %}
+          net.ipv6.conf.{{ ansible_facts.default_ipv6.interface }}.addr_gen_mode = 2
+          net.ipv6.conf.{{ ansible_facts.default_ipv6.interface }}.stable_secret = {{ ipv6_stable_secret }}
+          {% else %}
+          net.ipv6.conf.{{ ansible_facts.default_ipv4.interface }}.addr_gen_mode = 2
+          net.ipv6.conf.{{ ansible_facts.default_ipv4.interface }}.stable_secret = {{ ipv6_stable_secret }}
+          {% endif %}
+      notify: reload_sysctl
+  when: 
+    - ansible_facts.default_ipv6 is defined
+    - not sysctl_conf.stat.exists
 
 - name: Set sysctl settings to override ipv6-slaac with enabled forwarding
   copy:
-      dest: "/etc/sysctl.d/ipv6-slaac-override.conf"
-      content: |
-          net.ipv6.conf.all.accept_ra = 2
+    dest: "/etc/sysctl.d/ipv6-slaac-override.conf"
+    content: |
+      net.ipv6.conf.all.accept_ra = 2
   notify: reload_sysctl
