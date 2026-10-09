@@ -1,8 +1,10 @@
 ## Base ##
+node-name: {{ ansible_fqdn }}
 {% if inventory_hostname == groups['kubernetes'][0] %}
 # Initialize with internal etcd
 cluster-init: true
 {% else %}
+# Join cluster
 server: https://{{ hostvars[groups['kubernetes'][0]]['nodeip_ipv4'] }}:6443
 {% endif %}
 
@@ -11,6 +13,12 @@ tls-san:
   - {{ kubernetes.control_plane.dns_name }}
 
 # Networking
+{% if ansible_default_ipv6 is defined and ansible_default_ipv6.address is defined %}
+node-external-ip: {{ ansible_default_ipv4.address }},{{ ansible_default_ipv6.address }}
+{% else %}
+node-external-ip: {{ ansible_default_ipv4.address }}
+{% endif %}
+
 {% if kubernetes.network.clean_resolv_conf %}
 resolv-conf: /etc/resolv-k3s.conf
 {% endif %}
@@ -53,6 +61,11 @@ node-label:
 {% endif %}
 {% if zone is defined %}
   - topology.kubernetes.io/zone={{ zone }}
+{% endif %}
+{% if kubernetes.labels_extra is defined %}
+{% for item in kubernetes.labels_extra %}
+  - {{ item }}
+{% endfor %}
 {% endif %}
 
 {{ kubernetes.config_extra | to_yaml }}
