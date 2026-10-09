@@ -1,63 +1,45 @@
-- name: Install K3s-server for 1st-node
-  command: /root/k3s_install.sh {{ type }}
-  environment:
-    INSTALL_K3S_VERSION: "{{ kubernetes.version }}"
-  when:
-    - "inventory_hostname == groups['kubernetes'][0]"
-    - k3s_installed.rc != 0 or (kubernetes.version != '' and ('k3s version ' ~ kubernetes.version ~ ' ') not in k3s_installed.stdout)
-  register: command
-  changed_when: "'No change detected' not in command.stdout"
+- block:
+    - name: Install K3s-server
+      command: /root/k3s_install.sh {{ type }}
+      environment:
+        INSTALL_K3S_CHANNEL: latest
+        INSTALL_K3S_VERSION: "{{ kubernetes.version }}"
+      when: k3s_installed.rc != 0 or (kubernetes.version != '' and ('k3s version ' ~ kubernetes.version ~ ' ') not in k3s_installed.stdout)
+      register: command
+      changed_when: "'No change detected' not in command.stdout"
+      until: "command is not failed"
+      retries: 2
+      delay: 10
 
-- name: Make sure service is started / restarted on config change
-  service:
-    name: k3s
-    state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
-  when: "inventory_hostname == groups['kubernetes'][0]"
+    - name: Make sure service is started / restarted on config change
+      service:
+        name: k3s
+        enabled: true
+        state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
+    
+    - name: Waiting for K3s-server to accept connections
+      ansible.builtin.wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 6443
+        state: started
+  throttle: 1
 
-- name: Waiting for K3s-server to accept connections
-  ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
-    port: 6443
-    state: started
-  when: "inventory_hostname == groups['kubernetes'][0]"
+- name: Ensure the .kube directory exists
+  file:
+    path: "~/.kube"
+    state: directory
+    mode: "0755"
 
-- name: Install K3s-server for other nodes
-  command: /root/k3s_install.sh {{ type }}
-  environment:
-    INSTALL_K3S_VERSION: "{{ kubernetes.version }}"
-  when:
-    - "inventory_hostname != groups['kubernetes'][0]"
-    - k3s_installed.rc != 0 or (kubernetes.version != '' and ('k3s version ' ~ kubernetes.version ~ ' ') not in k3s_installed.stdout)
-  register: command
-  changed_when: "'No change detected' not in command.stdout"
-  until: "command is not failed"
-  retries: 2
-  delay: 10
-
-- name: Make sure service is started / restarted on config change
-  service:
-    name: k3s
-    state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
-  when: "inventory_hostname != groups['kubernetes'][0]"
-
-- name: Waiting for K3s-server to accept connections on other nodes
-  ansible.builtin.wait_for:
-    host: "{{ inventory_hostname }}"
-    port: 6443
-    state: started
-  when: "inventory_hostname != groups['kubernetes'][0]"
-
-#- name: Add Kubernetes environment-vars to /etc/profile.d/
-#  blockinfile:
-#    path: /etc/profile.d/k3s-bin.sh
-#    marker: "# {mark} ANSIBLE MANAGED BLOCK | k3s"
-#    block: |
-#      export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
-#    create: true
+- name: Create symbolic link for k3s.yaml
+  file:
+    src: "/etc/rancher/k3s/k3s.yaml"
+    dest: "~/.kube/config"
+    state: link
 
 - name: Deploy calico
   import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_calico.yml
-  when: "kubernetes.network.plugin == 'calico'"
+  when:
+    - "kubernetes.network.plugin == 'calico'"
 
 - name: Deploy network-helpers
   import_tasks: ./roles/kubernetes/tasks/install/server/network-plugin/deploy_network_helper.yml
