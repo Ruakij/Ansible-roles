@@ -1,2 +1,7 @@
 - name: reload_sysctl
   command: sysctl --system
+
+- name: restart_journald
+  systemd:
+    name: systemd-journald
+    state: restarted

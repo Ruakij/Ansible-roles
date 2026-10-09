@@ -6,3 +6,9 @@ disk_maintenance:
   fstrim_on_calendar:
   # Cron "minute hour" of the monthly ZFS trim and scrub from zfsutils-linux; unset keeps 00:24.
   zfs_cron_time:
+
+# journald.conf [Journal] settings of a drop-in, in this order; null leaves journald untouched.
+journald_size_cap:
+  SystemMaxUse: 512M
+  RuntimeMaxUse: 128M
+  MaxRetentionSec: 2week

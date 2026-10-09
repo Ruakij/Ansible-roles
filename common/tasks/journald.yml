@@ -1,0 +1,17 @@
+- name: Cap the journal size
+  when: journald_size_cap | default(none) is not none
+  block:
+    - name: Create the journald drop-in directory
+      file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+
+    - name: Set the journal size cap
+      copy:
+        dest: /etc/systemd/journald.conf.d/10-size-cap.conf
+        content: |
+          [Journal]
+          {% for key, value in journald_size_cap.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+      notify: restart_journald

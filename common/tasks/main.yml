@@ -11,3 +11,6 @@
 - import_tasks: ./networking.yml
 
 - import_tasks: ./disk_maintenance.yml
+
+- import_tasks: ./journald.yml
+  tags: journald
