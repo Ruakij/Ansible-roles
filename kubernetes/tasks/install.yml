@@ -36,12 +36,24 @@
     mode: "744"
 # todo: update when file changed?
 
+- name: Read the live registries.yaml
+  slurp:
+    src: /etc/rancher/k3s/registries.yaml
+  register: live_registries
+  failed_when: false
+  when: "type == 'server'"
+
+# Written only on a change k3s would see, like config.yaml
 - name: Deploy registries.yaml
   ansible.builtin.template:
     src: k3s/server/registries.yaml.j2
     dest: /etc/rancher/k3s/registries.yaml
   register: registries_config
-  when: "type == 'server'"
+  when:
+    - "type == 'server'"
+    - >-
+      live_registries.content is not defined or
+      (live_registries.content | b64decode | from_yaml) != (lookup('template', 'k3s/server/registries.yaml.j2') | from_yaml)
 
 - import_tasks: ./install/server/setup_network.yml
   when: "type == 'server'"
