@@ -4,6 +4,11 @@
   ignore_errors: true
   run_once: true
 
+- name: Check if the Cilium CLI is installed
+  stat:
+    path: /usr/local/bin/cilium
+  register: cilium_cli
+
 - name: Get Cilium CLI version
   ansible.builtin.command:
     argv:
@@ -36,7 +41,8 @@
         remote_src: yes
         #extra_opts: ["--strip-components=1"]
         mode: 777
-  when: cilium_cli_version.stdout is defined
+  # An installed CLI is left alone, not upgraded to the latest release
+  when: cilium_cli_version.stdout is defined and not cilium_cli.stat.exists
   become: yes
 
 - name: Clean up temporary files
