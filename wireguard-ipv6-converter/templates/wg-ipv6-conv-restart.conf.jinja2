@@ -1,0 +1,7 @@
+# BindsTo= in the converter unit only propagates stop, so a restart of
+# {{ wireguard_ipv6_converter.service.bindTo }} leaves the converter dead and the re-created
+# interface without its IPv6 addresses. Start it again whenever
+# {{ wireguard_ipv6_converter.service.bindTo }} starts. --no-block because the converter orders
+# itself After={{ wireguard_ipv6_converter.service.bindTo }}.
+[Service]
+ExecStartPost=/bin/systemctl --no-block start wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}.service

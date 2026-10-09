@@ -10,10 +10,30 @@
     daemon-reload: true
     enabled: true
 
+- name: Ensure drop-in directory for the bound service exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ wireguard_ipv6_converter.service.bindTo }}.d
+    state: directory
+    mode: "0755"
+  when: "wireguard_ipv6_converter.service.bindTo is defined"
+
+- name: Deploy start-propagation drop-in for the bound service
+  ansible.builtin.template:
+    src: wg-ipv6-conv-restart.conf.jinja2
+    dest: /etc/systemd/system/{{ wireguard_ipv6_converter.service.bindTo }}.d/10-wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}.conf
+    mode: "0644"
+  when: "wireguard_ipv6_converter.service.bindTo is defined"
+  register: upholdsFile
+
+- name: Reload systemd for drop-in
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: "upholdsFile.changed"
+
 - name: Start service if interface exists already
   ansible.builtin.service:
     name: wg-ipv6-converter_{{ wireguard_ipv6_converter.setup.interface }}
-    state: "{{ 'restarted' if deployDownload.changed or serviceFile.changed else 'started' }}"
+    state: "restarted"
   register: service
   when: "wireguard_ipv6_converter.setup.interface in ansible_interfaces"
 
