@@ -15,7 +15,7 @@
       service:
         name: k3s
         enabled: true
-        state: "{{ 'restarted' if not command.changed and config.changed else 'started' }}"
+        state: "{{ 'restarted' if not command.changed and (config.changed or registries_config.changed) else 'started' }}"
     
     - name: Waiting for K3s-server to accept connections
       ansible.builtin.wait_for:

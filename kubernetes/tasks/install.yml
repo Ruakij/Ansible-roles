@@ -36,6 +36,13 @@
     mode: "744"
 # todo: update when file changed?
 
+- name: Deploy registries.yaml
+  ansible.builtin.template:
+    src: k3s/server/registries.yaml.j2
+    dest: /etc/rancher/k3s/registries.yaml
+  register: registries_config
+  when: "type == 'server'"
+
 - import_tasks: ./install/server/setup_network.yml
   when: "type == 'server'"
 

@@ -52,3 +52,14 @@ kubernetes:
     etcd-arg:
       heartbeat-interval: 500
       election-timeout: 5000
+
+  registries_config:
+    # Defines the names and endpoints of registries
+    #  When embedded-registry is enabled, every registry needs to be defined here to allow this node to distribute those images.
+    #mirrors:
+      # Enable distribution for all registries
+      #"*": {}
+    
+    # Defines authentication and extra settings for the registries
+    #config:
+    
