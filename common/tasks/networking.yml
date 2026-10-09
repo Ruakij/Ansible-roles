@@ -47,3 +47,13 @@
     content: |
       net.ipv6.conf.all.accept_ra = 2
   notify: reload_sysctl
+
+- name: Set sysctl settings for TCP BBR 
+  copy:
+    dest: "/etc/sysctl.d/tcp-bbr.conf"
+    content: |
+      net.core.default_qdisc  = fq
+      net.ipv4.tcp_congestion_control = bbr 
+  when:
+    - ansible_kernel is version('4.9', '>=')
+  notify: reload_sysctl
