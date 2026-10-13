@@ -1,0 +1,9 @@
+# Debian 12+ ships no syslog daemon, so there is no /var/log/auth.log and the
+# file-based sshd jail refuses to start; read sshd from the journal instead.
+- name: Read the sshd jail from the journal
+  copy:
+    dest: /etc/fail2ban/jail.d/sshd-systemd.conf
+    content: |
+      [sshd]
+      backend = systemd
+  notify: restart_fail2ban
