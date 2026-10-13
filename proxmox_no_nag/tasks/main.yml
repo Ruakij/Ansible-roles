@@ -1,0 +1,15 @@
+- name: Install the subscription nag remover
+  copy:
+    src: pve-no-nag
+    dest: /usr/local/sbin/pve-no-nag
+    mode: "0755"
+
+- name: Run it after every dpkg run
+  copy:
+    src: 86pve-no-nag
+    dest: /etc/apt/apt.conf.d/86pve-no-nag
+    mode: "0644"
+
+- name: Remove the subscription nag
+  command: /usr/local/sbin/pve-no-nag
+  changed_when: false

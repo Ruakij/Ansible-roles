@@ -1,0 +1,7 @@
+#!/bin/sh
+# Disables the "No valid subscription" dialog of the Proxmox web UI. Called by the apt hook
+# 86pve-no-nag, because every proxmox-widget-toolkit update restores the file. Without a match
+# (changed upstream code) the dialog returns and nothing breaks.
+f=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+[ -f "$f" ] && sed -i 's/checked_command: function (orig_cmd) {$/& orig_cmd(); return;/' "$f"
+exit 0
